@@ -1,0 +1,20 @@
+{
+  "name": "bull-bay-ntcog-live-countdown",
+  "version": "1.0.0",
+  "description": "Bull Bay New Testament Church of God — Live Countdown & Event Control System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [],
+  "author": "Grace Connect",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}

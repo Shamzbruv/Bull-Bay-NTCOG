@@ -1,0 +1,46 @@
+[
+  {
+    "id": "sunday_service",
+    "name": "Sunday Service",
+    "subtitle": "Sunday Worship",
+    "preMessages": [
+      "We are happy to have you with us this Sunday morning.",
+      "Our pre-service countdown begins soon."
+    ],
+    "delayedMessages": [
+      "We will begin shortly.",
+      "Please stand by as we prepare for worship."
+    ],
+    "liveMessage": "We Are Now Live",
+    "liveSubmessage": "Please join us as worship begins",
+    "footerText": "",
+    "notices": [
+      "Welcome to Bull Bay New Testament Church of God. We are glad you are here.",
+      "Please prepare your heart and mind for worship.",
+      "Kindly silence your phones and other devices."
+    ],
+    "hasStreamLabel": true
+  },
+  {
+    "id": "prayer_meeting",
+    "name": "Prayer Meeting",
+    "subtitle": "Midweek Service",
+    "preMessages": [
+      "Welcome to our Prayer Meeting.",
+      "Please prepare your heart for prayer."
+    ],
+    "delayedMessages": [
+      "We will begin our Prayer Meeting shortly.",
+      "Thank you for waiting."
+    ],
+    "liveMessage": "We Are Now Live",
+    "liveSubmessage": "Let us unite our hearts in prayer.",
+    "footerText": "",
+    "notices": [
+      "If you must move, please do so quietly.",
+      "Let us maintain reverence as we begin shortly.",
+      "Kindly silence your mobile devices."
+    ],
+    "hasStreamLabel": true
+  }
+]

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Display</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Looping background video — muted so it autoplays without a gesture -->
+    <video id="bg-video" autoplay loop muted playsinline>
+        <source src="video/loop-display.mp4" type="video/mp4">
+    </video>
+
+    <!-- ====================================================================
+         OUTRO LAYER — audio player + full-screen visual panel.
+         Hidden by default; shown only when sanctuaryOverride is active.
+         ==================================================================== -->
+
+    <!-- Audio element for the outro song -->
+    <audio id="outro-audio" preload="auto">
+        <source src="/media/Go%20in%20Peace.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Full-screen visual panel shown during audio outro -->
+    <div id="outro-screen">
+        <!-- Subtle vignette gradient overlay on top of bg-video -->
+        <div class="outro-vignette"></div>
+
+        <!-- Centered closing message -->
+        <div class="outro-center-content">
+            <img src="/church-logo.png" alt="Bull Bay New Testament Church of God" class="outro-logo">
+            <h2 class="outro-header-title">Service is Closing</h2>
+            <div class="outro-gold-line"></div>
+        </div>
+
+        <!-- Lower-third overlay text block -->
+        <div id="outro-overlay" aria-live="polite">
+            <div id="outro-text-block">
+                <p id="outro-line-1"></p>
+                <p id="outro-line-2"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Corner toast shown if outro audio is blocked by autoplay policy -->
+    <div id="outro-audio-toast" role="alert">
+        🔊 Tap to enable sound
+    </div>
+
+    <!-- ====================================================================
+         NORMAL DISPLAY LAYERS (hidden while outro is active)
+         ==================================================================== -->
+    <div id="container">
+        <!-- Top Section -->
+        <header id="header-section">
+            <div class="welcome-small">Welcome to</div>
+            <h1 class="church-name" id="church-name-el"></h1>
+            <div class="service-subtitle">
+                <svg id="yt-icon" class="yt-icon" style="display:none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512">
+                    <path fill="#FF0000" d="M549.7 124.1c-6.3-23.7-24.8-42.3-48.3-48.6C458.8 64 288 64 288 64S117.2 64 74.6 75.5c-23.5 6.3-42 24.9-48.3 48.6-11.4 42.9-11.4 132.3-11.4 132.3s0 89.4 11.4 132.3c6.3 23.7 24.8 41.5 48.3 47.8C117.2 448 288 448 288 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zm-317.5 213.5V175.2l142.7 81.2-142.7 81.2z"/>
+                </svg>
+                <span id="service-name-el"></span>
+            </div>
+        </header>
+
+        <!-- Center Section (State Machine Container) -->
+        <main id="main-content">
+            
+            <!-- STATE: Pre-Countdown -->
+            <div id="state-pre" class="state-panel hidden">
+                <p class="welcome-paragraph" id="pre-msg-1"></p>
+                <p class="welcome-paragraph" id="pre-msg-2"></p>
+            </div>
+
+            <!-- STATE: Active Countdown -->
+            <div id="state-active" class="state-panel hidden">
+                <div class="countdown-label">Begins In</div>
+                <div role="timer" aria-live="polite" id="countdown">
+                    <!-- timer segments wrapped in spans for styling -->
+                    <span id="hours">00</span><span class="colon">:</span><span id="minutes">00</span><span class="colon">:</span><span id="seconds">00</span>
+                </div>
+                
+                <section id="notice-board-section">
+                    <div class="notice-divider"></div>
+                    <div id="notice-board">
+                        <div id="notice"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- STATE: Live -->
+            <div id="state-live" class="state-panel hidden">
+                <h2 class="live-title" id="live-msg-1"></h2>
+                <p class="live-subtitle" id="live-msg-2"></p>
+            </div>
+
+        </main>
+
+        <!-- Footer Section -->
+        <footer id="footer-section" style="display:none;">
+            <div class="sunday-school-msg" id="footer-msg"></div>
+        </footer>
+    </div>
+    
+    <!-- Screen reader accessible text for the countdown -->
+    <div class="sr-only" aria-live="polite" id="sr-countdown"></div>
+
+    <!-- Fullscreen Prompt Overlay -->
+    <div id="fs-prompt-overlay" class="hidden">
+        <div class="fs-prompt-text">Click anywhere to Start Presentation</div>
+    </div>
+    
+    <button id="fs-toggle-btn" class="fs-toggle-btn" title="Toggle Fullscreen">⛶</button>
+
+    <!-- Background Music: source is set dynamically by script.js via /api/audio -->
+    <audio id="bg-music" loop preload="auto"></audio>
+
+    <!-- Shown if browser blocks background music autoplay — one tap dismisses it -->
+    <div id="audio-toast" style="
+        display: none;
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(212,175,55,0.15);
+        border: 1px solid rgba(212,175,55,0.5);
+        backdrop-filter: blur(10px);
+        color: #f1c40f;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        padding: 0.75rem 2rem;
+        border-radius: 2rem;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        z-index: 9999;
+        animation: pulse 2s infinite;
+    ">
+        🔊 Tap anywhere to enable audio
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

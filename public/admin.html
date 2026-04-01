@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Control Panel</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+    <div class="dashboard">
+        <header class="dash-header">
+            <div>
+                <h1>Church Event Control Center</h1>
+                <p>Manage Screen State & Synchronization</p>
+            </div>
+            <div class="status-indicator">
+                <span class="dot connected"></span>
+                <span>Server Connected</span>
+            </div>
+        </header>
+
+        <div class="dash-grid">
+            <!-- Setup Panel -->
+            <section class="glass-panel">
+                <div class="panel-header">
+                    <h2>1. Event Setup</h2>
+                    <button id="create-one-time-btn" class="btn btn-outline small-btn">Create One-Time Event</button>
+                    <button id="edit-template-btn" class="btn btn-outline small-btn">Edit Templates</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Event Template</label>
+                    <select id="template-select"></select>
+                </div>
+
+                <div class="form-group">
+                    <label>Start Date & Time</label>
+                    <input type="datetime-local" id="start-time-input">
+                </div>
+
+                <div class="form-group row align-center">
+                    <label>Will this event be Live Streamed?</label>
+                    <label class="switch">
+                        <input type="checkbox" id="is-live-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <button id="set-event-btn" class="btn btn-primary">Lock & Start Sequence</button>
+            </section>
+
+            <!-- Active Control Panel -->
+            <section class="glass-panel active-controls">
+                <h2>2. Active Controls</h2>
+
+                <div id="active-event-display" class="active-status-box">
+                    <p class="label">Active Event</p>
+                    <h3 id="display-event-name">No Event Started</h3>
+                    <p id="display-event-time">—</p>
+                    <p id="display-countdown" style="font-size:1.1rem;color:var(--color-gold);font-weight:600;"></p>
+                    <p class="label" style="margin-top:0.5rem">Stream Status</p>
+                    <p id="display-is-live">—</p>
+                    <span id="display-state" class="badge">IDLE</span>
+                </div>
+
+                <div class="control-group">
+                    <label>Delay Controls</label>
+                    <div class="button-row">
+                        <button id="add-1-btn" class="btn btn-secondary">+1 Min</button>
+                        <button id="add-5-btn" class="btn btn-secondary">+5 Mins</button>
+                    </div>
+                    <div class="button-row" style="margin-top: 10px;">
+                        <input type="number" id="arbitrary-delay-input" placeholder="Mins" class="num-input">
+                        <button id="add-arbitrary-btn" class="btn btn-secondary" style="flex:2">Add Custom
+                            Delay</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Force State Transition</label>
+                    <div class="button-row">
+                        <button id="force-pre-btn" class="btn btn-warning">Pre-Service</button>
+                        <button id="force-delayed-btn" class="btn btn-warning">Delayed</button>
+                        <button id="force-live-btn" class="btn btn-danger">Go Live NOW</button>
+                        <button id="force-idle-btn" class="btn">Idle / Clear</button>
+                    </div>
+                </div>
+
+                <!-- ============================================
+                     END OF SERVICE OUTRO
+                     ============================================ -->
+                <div class="outro-divider"></div>
+
+                <button id="end-of-service-btn" class="btn btn-outro" title="Trigger the 4:33 sanctuary outro on all connected sanctuary TVs">
+                    ⛪ End of Service (4:33 Outro)
+                </button>
+
+                <!-- Status strip — updates live while outro is running -->
+                <div id="outro-status-strip" class="outro-status-strip">
+                    <div class="outro-strip-row">
+                        <span id="outro-state-badge" class="outro-badge outro-badge-idle">Idle</span>
+                        <span id="outro-countdown-display" class="outro-time"></span>
+                    </div>
+                    <div class="outro-strip-row outro-strip-meta">
+                        <span id="outro-sanctuary-count">Sanctuary TVs: Connecting…</span>
+                        <span id="outro-audio-warning" class="outro-audio-warn hidden">⚠ Audio blocked on screen(s)</span>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+
+        <!-- Music Controls -->
+        <section class="glass-panel" style="margin-top: 0;">
+            <h2 style="font-family:var(--font-heading);color:var(--color-gold);font-size:1.1rem;margin-bottom:1.25rem;">
+                🎵 Background Music</h2>
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+
+                <!-- Play/Pause -->
+                <button id="music-toggle-btn" class="btn btn-secondary" style="min-width:130px;">▶ Play</button>
+
+                <!-- Restart -->
+                <button id="music-restart-btn" class="btn btn-secondary" title="Restart from beginning">↺
+                    Restart</button>
+
+                <!-- Loop toggle -->
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="color:#cbd5e1;font-size:0.9rem;white-space:nowrap;">Loop</label>
+                    <label class="switch">
+                        <input type="checkbox" id="music-loop-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- Volume -->
+                <div style="display:flex;align-items:center;gap:0.75rem;flex:1;min-width:180px;">
+                    <label style="white-space:nowrap;color:#cbd5e1;font-size:0.9rem;">🔊</label>
+                    <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.6"
+                        style="flex:1;accent-color:var(--color-gold);cursor:pointer;">
+                    <span id="music-volume-label"
+                        style="color:var(--color-gold);font-weight:600;min-width:36px;">60%</span>
+                </div>
+
+            </div>
+            <p class="music-now-playing" style="color:#475569;font-size:0.8rem;margin:0.75rem 0 0 0;">Detecting audio file...</p>
+        </section>
+
+
+        <footer class="dash-footer">
+            <a href="/" target="_blank" class="btn btn-outline" style="margin-right:1rem;">Launch Sanctuary Display</a>
+            <a href="/overlay.html" target="_blank" class="btn btn-outline">Launch OBS Overlay Link</a>
+        </footer>
+    </div>
+
+    <!-- ================================================================
+         END OF SERVICE OUTRO — Confirmation Modal
+         ================================================================ -->
+    <div id="outro-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="outro-modal-title">
+        <div class="modal-content glass-panel outro-modal-content">
+            <h2 id="outro-modal-title" class="outro-modal-heading">✝ End of Service</h2>
+
+            <p class="outro-modal-subtitle">
+                This will start the <strong>4:33 closing outro</strong> on all sanctuary screens —
+                a sequence of blessings and scripture as the service closes.
+            </p>
+
+            <div id="outro-media-warning" class="outro-media-warn hidden">
+                ⚠ <strong>No outro audio found.</strong> Screens will display the text closing only.
+                Place an audio file in <code>public/media/</code> and restart the server.
+            </div>
+
+            <div class="modal-actions">
+                <button id="outro-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="outro-confirm-btn" class="btn btn-outro-confirm">✝ Begin Outro</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Template Editor Modal -->
+    <div id="template-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2 id="modal-title">Edit Template</h2>
+
+            <div class="form-grid">
+                <div>
+                    <div class="form-group">
+                        <label>Event Title</label>
+                        <input type="text" id="tpl-title" placeholder="e.g. Prayer Meeting">
+                    </div>
+                    <div class="form-group">
+                        <label>Subtitle (Optional)</label>
+                        <input type="text" id="tpl-subtitle" placeholder="e.g. Midweek Service">
+                    </div>
+                    <div class="form-group">
+                        <label>Footer Text (Leave blank to hide)</label>
+                        <input type="text" id="tpl-footer" placeholder="e.g. Sunday School is now in progress...">
+                    </div>
+                    <div class="form-group row align-center">
+                        <label>Show YouTube/Stream Label next to title?</label>
+                        <label class="switch">
+                            <input type="checkbox" id="tpl-stream-label">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <!-- New Modal DateTime overrides for One-Time -->
+                    <div id="modal-onetime-controls" class="hidden"
+                        style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(212,175,55,0.2);">
+                        <h3 style="color:var(--color-gold); font-family:var(--font-heading); margin-top:0;">Event Timing
+                        </h3>
+                        <div class="form-group">
+                            <label>Start Date & Time</label>
+                            <input type="datetime-local" id="modal-start-time">
+                        </div>
+                        <div class="form-group row align-center">
+                            <label>Start event immediately?</label>
+                            <input type="checkbox" id="modal-start-now" style="width: auto;">
+                        </div>
+                        <div class="form-group row align-center">
+                            <label>Live Streamed?</label>
+                            <label class="switch">
+                                <input type="checkbox" id="modal-is-live" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="form-group">
+                        <label>Pre-Service Messages (One per line)</label>
+                        <textarea id="tpl-pre-msgs" rows="3"
+                            placeholder="Welcome to our service.&#10;We will begin shortly."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Delayed Messages (One per line)</label>
+                        <textarea id="tpl-delayed-msgs" rows="3"
+                            placeholder="We will begin shortly.&#10;Thank you for waiting."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Rotating Notices (Countdown phase - One per line)</label>
+                        <textarea id="tpl-notices" rows="4"
+                            placeholder="Silence phones.&#10;Prepare your heart."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Live State Primary Message</label>
+                        <input type="text" id="tpl-live-msg" placeholder="We Are Now Live">
+                        <label style="margin-top:10px;">Live State Sub-Message</label>
+                        <input type="text" id="tpl-live-submsg" placeholder="Please join us.">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="modal-save-btn" class="btn btn-primary">Save Template</button>
+                <button id="modal-start-onetime-btn" class="btn btn-primary" style="display:none;">Start One-Time
+                    Event</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="admin.js"></script>
+</body>
+
+</html>

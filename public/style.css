@@ -1,0 +1,488 @@
+:root {
+    --color-bg-base: #020813; /* Deep midnight blue */
+    --color-overlay: rgba(2, 8, 19, 0.85); /* Dark cinematic overlay */
+    --color-text-main: #f8f9fa; /* Warm white */
+    --color-text-muted: #cbd5e1; /* Subtle slate */
+    --color-gold: #d4af37; /* Elegant soft gold */
+    --color-gold-glow: rgba(212, 175, 55, 0.3);
+    
+    --font-heading: 'Cinzel', serif; /* Classic, reverent feel */
+    --font-body: 'Outfit', sans-serif; /* Clean, modern, highly legible */
+}
+
+/* Boilerplate Resets */
+html, body {
+    margin: 0; 
+    padding: 0; 
+    height: 100%;
+    background: #000; /* Pure black behind the video — nothing more */
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    background: #000;
+}
+
+/* Full-screen looping background video */
+#bg-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;    /* Fill screen, crop edges if needed */
+    z-index: 0;           /* Above the black body but below everything else */
+    pointer-events: none;
+}
+
+#container {
+    position: relative;   /* Creates a stacking context above the video */
+    z-index: 1;
+    width: 100vw;
+    height: 100vh;
+    padding: 5vh 6vw;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: rgba(2, 8, 19, 0.55); /* Semi-transparent dark tint over the video */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* Screen reader only utility class */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
+}
+
+/* Kiosk Utilities */
+.hide-cursor {
+    cursor: none !important;
+}
+.fs-toggle-btn {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 9999;
+}
+.fs-toggle-btn:hover {
+    opacity: 1;
+    background: rgba(255,255,255,0.15);
+}
+.show-controls .fs-toggle-btn {
+    opacity: 0.3; /* Show dimly when mouse is moving */
+}
+
+/* Fullscreen Overlay Prompt */
+#fs-prompt-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--color-bg-base);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+#fs-prompt-overlay.hidden {
+    display: none;
+}
+.fs-prompt-text {
+    font-size: 2vw;
+    color: var(--color-gold);
+    animation: holyPulse 3s infinite;
+}
+
+/* ================== TOP SECTION ================== */
+#header-section { 
+    margin-bottom: 2vh; 
+    text-align: center;
+}
+.welcome-small { 
+    font-size: 1.8vw; 
+    font-weight: 300; 
+    letter-spacing: 0.25em; 
+    text-transform: uppercase; 
+    color: var(--color-gold); 
+    margin-bottom: 0.8vh; 
+}
+.church-name { 
+    font-family: var(--font-heading); 
+    font-size: 4vw; /* Scaled slightly down to ensure it stays on one line usually */
+    font-weight: 600; 
+    margin: 0; 
+    color: var(--color-text-main); 
+    text-shadow: 0 4px 12px rgba(0,0,0,0.6); 
+}
+.service-subtitle { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 2.2vw; 
+    font-weight: 300; 
+    margin-top: 1.5vh; 
+    color: var(--color-text-muted); 
+    letter-spacing: 0.05em;
+}
+.yt-icon { 
+    width: 2.8vw; 
+    height: 2.8vw; 
+    margin-right: 0.8vw; 
+}
+
+/* ================== MAIN CONTENT CONTAINER ================== */
+#main-content { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    text-align: center;
+}
+.state-panel { 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    transition: opacity 1s ease; 
+}
+.state-panel.hidden { 
+    display: none; 
+    opacity: 0; 
+}
+.state-panel.active { 
+    display: flex; 
+    opacity: 1; 
+    animation: fadeInFadeUp 1.5s ease forwards; 
+}
+
+@keyframes fadeInFadeUp { 
+    from { opacity: 0; transform: translateY(15px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+/* --- STATE: Pre-Countdown --- */
+.welcome-paragraph { 
+    font-size: 2.8vw; 
+    font-weight: 300; 
+    line-height: 1.5; 
+    max-width: 80%; 
+    margin: 1.5vh 0; 
+}
+.stand-by { 
+    font-size: 2.2vw; 
+    color: var(--color-gold); 
+    font-style: italic; 
+    margin-top: 4vh; 
+}
+
+/* --- STATE: Active Countdown --- */
+.countdown-label { 
+    font-size: 2vw; 
+    font-weight: 300; 
+    letter-spacing: 0.3em; 
+    text-transform: uppercase; 
+    color: var(--color-gold); 
+    margin-bottom: -1vh; 
+}
+#countdown { 
+    font-size: 13vw; 
+    font-weight: 600; 
+    font-family: var(--font-body); 
+    font-variant-numeric: tabular-nums; 
+    line-height: 1; 
+    color: var(--color-text-main); 
+    text-shadow: 0 0 25px var(--color-gold-glow); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+/* Divider colons that pulse softly */
+.colon { 
+    margin: 0 1vw; 
+    opacity: 0.8; 
+    animation: holyPulse 3s ease-in-out infinite; 
+    color: var(--color-gold);
+}
+
+@keyframes holyPulse { 
+    0%, 100% { opacity: 0.5; text-shadow: 0 0 10px rgba(212,175,55,0.1); } 
+    50% { opacity: 1; text-shadow: 0 0 25px rgba(212,175,55,0.6); } 
+}
+
+/* Notice Board */
+#notice-board-section {
+    margin-top: 4vh;
+    width: 80%;
+    max-width: 1200px;
+    background: rgba(2, 8, 19, 0.4);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 3vh 5vw;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    position: relative;
+}
+/* Subdued elegant glow on top edge */
+#notice-board-section::before {
+    content: ''; 
+    position: absolute; 
+    top: 0; left: 0; right: 0; 
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    opacity: 0.6;
+}
+.notice-title { 
+    font-family: var(--font-heading); 
+    font-size: 2vw; 
+    color: var(--color-gold); 
+    margin: 0 0 1.5vh 0; 
+    font-weight: 400; 
+    letter-spacing: 0.15em; 
+    text-transform: uppercase;
+}
+.notice-divider { 
+    width: 60px; 
+    height: 1px; 
+    background: var(--color-gold); 
+    margin: 0 auto 3vh auto; 
+    opacity: 0.7; 
+}
+#notice {
+    font-size: 3vw; 
+    font-weight: 300; 
+    line-height: 1.4; 
+    color: var(--color-text-main);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+    min-height: 4vw; /* Prevents jumping if message lengths differ strongly */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#notice.fade-out { 
+    opacity: 0; 
+    transform: translateY(10px); 
+}
+#notice.fade-in { 
+    opacity: 1; 
+    transform: translateY(0); 
+}
+
+/* --- STATE: Live --- */
+.live-title { 
+    font-family: var(--font-heading); 
+    font-size: 5.5vw; 
+    color: var(--color-gold); 
+    margin: 0 0 2vh 0; 
+    text-shadow: 0 0 40px var(--color-gold-glow); 
+}
+.live-subtitle { 
+    font-size: 3.5vw; 
+    font-weight: 300; 
+    margin-bottom: 3vh; 
+}
+.live-reverence { 
+    font-size: 2vw; 
+    color: var(--color-text-muted); 
+    font-style: italic; 
+}
+
+
+/* ================== FOOTER SECTION ================== */
+#footer-section { 
+    margin-top: auto; 
+    padding-top: 2vh; 
+    text-align: center;
+}
+.sunday-school-msg { 
+    font-size: 1.8vw; 
+    color: var(--color-gold); 
+    background: rgba(212,175,55,0.08); /* Extremely subtle wash */
+    padding: 1vh 2vw; 
+    border-radius: 30px; 
+    border: 1px solid rgba(212,175,55,0.2);
+    display: inline-block; 
+    margin-bottom: 2vh; 
+}
+.scripture { 
+    font-family: var(--font-heading); 
+    font-size: 1.6vw; 
+    color: var(--color-text-muted); 
+    opacity: 0.7; 
+    letter-spacing: 0.05em;
+}
+
+/* ================== OUTRO LAYER ================== */
+
+/* Full-screen outro panel — sits above bg-video and container */
+#outro-screen {
+    display: none;              /* shown by JS when outro is active */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between; /* logo block top, text block bottom — never overlap */
+    padding: 7vh 4vw 8vh;
+    box-sizing: border-box;
+    animation: outroScreenIn 1.2s ease forwards;
+}
+
+@keyframes outroScreenIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Deep vignette over the bg-video for a cinematic feel */
+.outro-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(2, 8, 19, 0.55) 0%,
+        rgba(2, 8, 19, 0.88) 100%
+    );
+    pointer-events: none;
+}
+
+/* Centered content group */
+.outro-center-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5vh;
+    animation: fadeInFadeUp 1.8s ease forwards;
+}
+
+/* Church logo in outro center */
+.outro-logo {
+    width: clamp(120px, 14vw, 200px);
+    height: auto;
+    border-radius: 50%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 28px rgba(212, 175, 55, 0.35))
+            drop-shadow(0 0 60px rgba(212, 175, 55, 0.12));
+    animation: holyPulse 4s ease-in-out infinite;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* "Service is Closing" heading */
+.outro-header-title {
+    font-family: var(--font-heading);
+    font-size: 4vw;
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin: 0;
+    letter-spacing: 0.12em;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.7);
+    text-transform: uppercase;
+}
+
+/* Thin gold decorative line below title */
+.outro-gold-line {
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    opacity: 0.8;
+}
+
+/* Lower-third text block — flex child anchored to bottom of outro-screen */
+#outro-overlay {
+    position: relative; /* participates in flex layout — no absolute overlap */
+    width: 100%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#outro-text-block {
+    text-align: center;
+    padding: 2.5vh 5vw;
+    background: rgba(2, 8, 19, 0.72);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    max-width: 75vw;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#outro-line-1 {
+    font-family: var(--font-heading);
+    font-size: 3.5vw;
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin: 0 0 1.2vh 0;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+    letter-spacing: 0.04em;
+}
+
+#outro-line-2 {
+    font-family: var(--font-body);
+    font-size: 2.4vw;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--color-gold);
+    margin: 0;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+}
+
+/* Fade transitions for overlay text */
+#outro-text-block.outro-fade-in {
+    animation: outroTextIn 0.5s ease forwards;
+}
+#outro-text-block.outro-fade-out {
+    animation: outroTextOut 0.5s ease forwards;
+}
+
+@keyframes outroTextIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes outroTextOut {
+    from { opacity: 1; transform: translateY(0);    }
+    to   { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Corner toast for audio-blocked state during outro */
+#outro-audio-toast {
+    display: none;
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    background: rgba(212,175,55,0.12);
+    border: 1px solid rgba(212,175,55,0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #f1c40f;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    z-index: 10002;
+    animation: holyPulse 2.5s infinite;
+}
