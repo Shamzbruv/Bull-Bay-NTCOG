@@ -20,8 +20,8 @@
                 <p>Manage Screen State & Synchronization</p>
             </div>
             <div class="status-indicator">
-                <span class="dot connected"></span>
-                <span>Server Connected</span>
+                <span id="connection-dot" class="dot"></span>
+                <span id="connection-text">Connecting…</span>
             </div>
         </header>
 
@@ -106,6 +106,7 @@
                     <div class="outro-strip-row">
                         <span id="outro-state-badge" class="outro-badge outro-badge-idle">Idle</span>
                         <span id="outro-countdown-display" class="outro-time"></span>
+                        <button id="outro-stop-btn" class="btn btn-danger small-btn hidden" title="Stop the outro on all sanctuary TVs">■ Stop Outro</button>
                     </div>
                     <div class="outro-strip-row outro-strip-meta">
                         <span id="outro-sanctuary-count">Sanctuary TVs: Connecting…</span>

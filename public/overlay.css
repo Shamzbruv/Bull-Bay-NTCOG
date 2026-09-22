@@ -47,15 +47,6 @@ body {
     100% { transform: translateY(0); opacity: 1; }
 }
 
-#event-title {
-    font-family: var(--font-heading);
-    color: var(--color-gold);
-    font-size: 1.5rem;
-    margin: 0 0 1rem 0;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
 #countdown {
     font-size: 3rem;
     font-weight: 600;

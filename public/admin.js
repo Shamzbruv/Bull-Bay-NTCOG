@@ -40,6 +40,11 @@ const outroCountdownDisp = document.getElementById('outro-countdown-display');
 const outroSanctuaryCount= document.getElementById('outro-sanctuary-count');
 const outroAudioWarning  = document.getElementById('outro-audio-warning');
 const outroMediaWarning  = document.getElementById('outro-media-warning');
+const outroStopBtn       = document.getElementById('outro-stop-btn');
+
+// Connection indicator
+const connectionDot  = document.getElementById('connection-dot');
+const connectionText = document.getElementById('connection-text');
 
 // =========================================================================
 // STATE
@@ -79,6 +84,17 @@ function formatCountdown(msRemaining) {
 
 // Set default time to +15 minutes from now on load
 startTimeInput.value = toLocalInputValue(getFutureISO(15));
+
+// =========================================================================
+// CONNECTION INDICATOR
+// =========================================================================
+function setConnected(connected) {
+    connectionDot.classList.toggle('connected', connected);
+    connectionText.textContent = connected ? 'Server Connected' : 'Disconnected — reconnecting…';
+}
+
+socket.on('connect',    () => setConnected(true));
+socket.on('disconnect', () => setConnected(false));
 
 // =========================================================================
 // MUSIC CONTROLS
@@ -156,9 +172,10 @@ outroModal.addEventListener('click', (e) => {
 outroConfirmBtn.addEventListener('click', () => {
     socket.emit('startOutro');
     closeOutroModal();
-    // Provide immediate optimistic feedback on button
-    outroConfirmBtn.textContent = '✓ Outro Started';
-    setTimeout(() => { outroConfirmBtn.textContent = '▶ Start Outro Now'; }, 3000);
+});
+
+outroStopBtn.addEventListener('click', () => {
+    if (confirm('Stop the outro on all sanctuary screens?')) socket.emit('clearOutro');
 });
 
 // =========================================================================
@@ -175,7 +192,14 @@ function stopOutroStripTick() {
     outroStripInterval = null;
 }
 
+/** While an outro runs: offer Stop, and block a second start (the server ignores it anyway). */
+function setOutroRunningUI(running) {
+    outroStopBtn.classList.toggle('hidden', !running);
+    endOfServiceBtn.disabled = running;
+}
+
 function updateOutroStrip() {
+    setOutroRunningUI(!!activeOutro && activeOutro.endsAt > Date.now());
     if (!activeOutro) {
         outroStateBadge.textContent   = 'Idle';
         outroStateBadge.className     = 'outro-badge outro-badge-idle';
@@ -217,6 +241,7 @@ socket.on('sanctuaryOverride', (payload) => {
 socket.on('sanctuaryOverrideClear', () => {
     activeOutro = null;
     stopOutroStripTick();
+    setOutroRunningUI(false);
     outroStateBadge.textContent    = 'Completed';
     outroStateBadge.className      = 'outro-badge outro-badge-complete';
     outroCountdownDisp.textContent = '';
@@ -409,7 +434,7 @@ function updatePanelDisplay(state) {
     const badges = { live: 'badge live', delayed: 'badge delayed',
                      countdown: 'badge active', pre: 'badge pre', blank: 'badge' };
     dispState.className   = badges[phase] || 'badge';
-    dispState.textContent = phase.toUpperCase();
+    dispState.textContent = phase === 'blank' ? 'IDLE' : phase.toUpperCase();
 
     if (target) {
         dispEventTime.textContent = `Target: ${target.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;

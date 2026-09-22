@@ -4,7 +4,6 @@ const socket = io({ query: { role: 'overlay' } });
 
 // --- DOM REFS ---
 const overlayContainer = document.getElementById('overlay-container');
-const eventTitle       = document.getElementById('event-title');
 const countdownWrap    = document.getElementById('countdown-wrap');
 const statusWrap       = document.getElementById('status-wrap');
 const statusText       = document.getElementById('status-text');
@@ -31,27 +30,15 @@ function resolvePhase(state) {
     return 'pre';
 }
 
-socket.on('stateSync', (state) => {
-    serverState = state;
-});
-
-function tick() {
-    if (!serverState || !serverState.activeEvent) {
-        overlayContainer.classList.add('hidden');
-        requestAnimationFrame(tick);
-        return;
-    }
-
+function render() {
     const phase = resolvePhase(serverState);
 
     if (phase === 'blank') {
         overlayContainer.classList.add('hidden');
-        requestAnimationFrame(tick);
         return;
     }
 
     overlayContainer.classList.remove('hidden');
-    eventTitle.textContent = (serverState.activeEvent.name || '').trim();
 
     if (phase === 'countdown') {
         const diff = new Date(serverState.startTime).getTime() - Date.now();
@@ -82,8 +69,14 @@ function tick() {
         statusText.textContent = 'Live Now';
         statusText.style.color = '#e74c3c';
     }
-
-    requestAnimationFrame(tick);
 }
 
-requestAnimationFrame(tick);
+socket.on('stateSync', (state) => {
+    serverState = state;
+    render();
+});
+
+// A plain interval (rather than a requestAnimationFrame chain) keeps ticking even if
+// one render throws, and isn't paused when OBS stops painting a hidden source.
+setInterval(render, 250);
+render();

@@ -217,8 +217,8 @@ function broadcastSanctuaryClear() {
 /** Count sanctuary sockets and broadcast the count to all admins. */
 async function broadcastSanctuaryCount() {
     try {
-        const sockets = await io.in('sanctuary').allSockets();
-        io.to('admin').emit('sanctuaryCount', sockets.size);
+        const sockets = await io.in('sanctuary').fetchSockets();
+        io.to('admin').emit('sanctuaryCount', sockets.length);
     } catch (_) {}
 }
 
@@ -304,8 +304,8 @@ io.on('connection', (socket) => {
     const role = socket.handshake.query.role || 'sanctuary'; // default → sanctuary
     socket.join(role);
     console.log(`Client connected: ${socket.id}  role=${role}`);
-    // Notify admins of updated sanctuary TV count
-    if (role === 'sanctuary') setImmediate(broadcastSanctuaryCount);
+    // Notify admins of updated sanctuary TV count (and give a newly opened admin panel the current count)
+    if (role === 'sanctuary' || role === 'admin') setImmediate(broadcastSanctuaryCount);
 
     // Send current state on connect
     socket.emit('stateSync', appState);
@@ -317,7 +317,9 @@ io.on('connection', (socket) => {
     }
 
     // --- EVENT CONTROLS ---
+    // Handlers run outside any try/catch, so a malformed payload that throws here would crash the server.
     socket.on('setEvent', (data) => {
+        if (!data || isNaN(new Date(data.startTime))) return;
         if (data.isOneTime && data.oneTimeData) {
             appState.activeEvent = { ...data.oneTimeData, id: 'one_time_custom' };
             console.log("Started One-Time Event:", appState.activeEvent.name);
@@ -333,7 +335,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('addDelay', (minutes) => {
-        if (!appState.startTime) return;
+        if (!appState.startTime || !Number.isFinite(Number(minutes))) return;
         const currentStart = new Date(appState.startTime);
         currentStart.setMinutes(currentStart.getMinutes() + Number(minutes));
         appState.startTime = currentStart.toISOString();
@@ -342,6 +344,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('musicControl', (data) => {
+        if (!data) return;
         if (typeof data.playing === 'boolean') appState.music.playing = data.playing;
         if (typeof data.volume  === 'number')  appState.music.volume  = Math.min(1, Math.max(0, data.volume));
         if (typeof data.loop    === 'boolean') appState.music.loop    = data.loop;
@@ -365,6 +368,9 @@ io.on('connection', (socket) => {
     // --- OUTRO CONTROLS ---
 
     socket.on('startOutro', () => {
+        // Screens ignore a second start while one is playing, so restarting here would only
+        // desync the server timer from what they're showing. Stop it first to restart.
+        if (appState.sanctuaryOverride) return;
         const DURATION_MS = 273000; // 4:33 exactly
         const now = Date.now();
         appState.sanctuaryOverride = {
@@ -401,6 +407,7 @@ io.on('connection', (socket) => {
 
     // --- TEMPLATE MANAGER ---
     socket.on('saveTemplate', (templateData) => {
+        if (!templateData || typeof templateData !== 'object') return;
         const idx = eventTemplates.findIndex(t => t.id === templateData.id);
         if (idx !== -1) {
             eventTemplates[idx] = templateData;

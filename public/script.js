@@ -88,7 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
             bgMusic.currentTime = 0;
         }
         musicWanted = !!m.playing;
-        if (m.playing) { tryPlay(); } else { bgMusic.pause(); if (audioToast) audioToast.style.display = 'none'; }
+        // Background music stays paused while the outro song plays; stopOutro() re-applies it.
+        if (m.playing && !outroActive) { tryPlay(); } else { bgMusic.pause(); if (audioToast) audioToast.style.display = 'none'; }
     }
 
     // =========================================================================
@@ -105,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show outro screen, hide normal display content
         outroScreen.style.display  = 'flex';
         container.style.visibility = 'hidden';
+        bgMusic.pause();
+        if (audioToast) audioToast.style.display = 'none';
 
         const durationSec = payload.durationMs / 1000;
         const offsetSec   = Math.max(0, Math.min((Date.now() - payload.startedAt) / 1000, durationSec));
@@ -169,6 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (outroFallbackTimer)   { clearTimeout(outroFallbackTimer);    outroFallbackTimer   = null; }
 
         currentOverlayIdx = -1;
+
+        // Resume background music if the operator still has it switched on
+        if (serverState) applyMusic(serverState);
     }
 
     // =========================================================================
@@ -315,6 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (JSON.stringify(newNotices) !== JSON.stringify(currentNotices)) {
             currentNotices = newNotices;
             if (noticeInterval) { clearInterval(noticeInterval); noticeInterval = null; }
+            // applyPhase() only schedules notices on a phase change, so if a new event is
+            // started while already counting down, restart the rotation here.
+            if (currentPhase === 'countdown' && !outroActive) scheduleNotices();
         }
     }
 
@@ -375,11 +384,11 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('sanctuaryOverrideClear', () => {
         stopOutro();
         // Force a phase render refresh after stopping outro
+        currentPhase = null; // reset so applyPhase re-renders
         if (serverState) {
             applyEventContent(serverState);
             applyPhase(resolvePhase(serverState));
         }
-        currentPhase = null; // reset so applyPhase re-renders
     });
 
     /** On reconnect — re-request current outro state in case server has an active one */

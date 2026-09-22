@@ -302,6 +302,11 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-family: var(--font-body);
     transition: all 0.25s ease;
 }
+.btn-outro:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 .btn-outro:hover {
     background: rgba(192, 57, 43, 0.85);
     border-color: #c0392b;
@@ -340,6 +345,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: var(--color-gold);
     font-weight: 600;
 }
+
+#outro-stop-btn { margin-left: auto; }
 
 /* Outro state badges */
 .outro-badge {
