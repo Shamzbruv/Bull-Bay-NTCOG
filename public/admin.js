@@ -45,6 +45,29 @@ const outroStopBtn       = document.getElementById('outro-stop-btn');
 // Connection indicator
 const connectionDot  = document.getElementById('connection-dot');
 const connectionText = document.getElementById('connection-text');
+const logoutBtn      = document.getElementById('logout-btn');
+
+// Media library
+const bgCurrentName    = document.getElementById('bg-current-name');
+const bgLibraryGrid    = document.getElementById('bg-library-grid');
+const bgUploadInput    = document.getElementById('bg-upload-input');
+const bgUploadStatus   = document.getElementById('bg-upload-status');
+const musicCurrentName = document.getElementById('music-current-name');
+const musicLibraryGrid = document.getElementById('music-library-grid');
+const musicUploadInput = document.getElementById('music-upload-input');
+const musicUploadStatus= document.getElementById('music-upload-status');
+
+// OBS text display
+const textOverlayInput         = document.getElementById('text-overlay-input');
+const textOverlayPushBtn       = document.getElementById('text-overlay-push-btn');
+const textOverlayClearBtn      = document.getElementById('text-overlay-clear-btn');
+const textOverlayLiveIndicator = document.getElementById('text-overlay-live-indicator');
+
+// Account
+const currentPasswordInput = document.getElementById('current-password-input');
+const newPasswordInput     = document.getElementById('new-password-input');
+const changePasswordBtn    = document.getElementById('change-password-btn');
+const changePasswordStatus = document.getElementById('change-password-status');
 
 // =========================================================================
 // STATE
@@ -59,6 +82,36 @@ let panelTickInterval  = null;
 let activeOutro        = null; // the current sanctuaryOverride payload
 let outroStripInterval = null;
 let sanctuaryTVCount   = 0;    // count of connected sanctuary room clients
+
+// Media library state
+let bgLibraryItems    = [];
+let musicLibraryItems = [];
+let textOverlaySynced = false; // becomes true once the textarea has been filled from the server once
+
+// =========================================================================
+// AUTH — logout + session-expiry handling
+// =========================================================================
+logoutBtn.addEventListener('click', async () => {
+    try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+    window.location.href = '/login.html';
+});
+
+/** The server disconnects an admin socket outright if its session cookie is missing/expired. */
+socket.on('authError', () => {
+    window.location.href = '/login.html?next=/admin.html';
+});
+
+/** Shared fetch wrapper for admin-only REST calls: redirects to login on a real session
+ *  expiry (AUTH_REQUIRED), and otherwise just hands back the parsed response. */
+async function apiFetch(url, options) {
+    const res = await fetch(url, options);
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && data.code === 'AUTH_REQUIRED') {
+        window.location.href = '/login.html?next=/admin.html';
+        throw new Error('Session expired');
+    }
+    return { ok: res.ok, status: res.status, data };
+}
 
 // =========================================================================
 // TIME HELPERS
@@ -262,6 +315,138 @@ socket.on('sanctuaryCount', (count) => {
 });
 
 // =========================================================================
+// MEDIA LIBRARY — background video/image + background music
+// =========================================================================
+function libraryItemThumb(kind, item) {
+    if (kind === 'background') {
+        if ((item.mimeType || '').startsWith('image/')) return `<img src="${item.url}" alt="">`;
+        return `<video src="${item.url}#t=0.5" muted preload="metadata"></video>`;
+    }
+    return `🎵`;
+}
+
+function renderLibrary(kind) {
+    const items = kind === 'background' ? bgLibraryItems : musicLibraryItems;
+    const grid  = kind === 'background' ? bgLibraryGrid  : musicLibraryGrid;
+    const current = kind === 'background'
+        ? (serverState && serverState.backgroundMedia)
+        : (serverState && serverState.musicTrack);
+
+    grid.innerHTML = '';
+    if (!items.length) {
+        grid.innerHTML = '<p class="library-empty">Nothing uploaded yet.</p>';
+    }
+    items.forEach(item => {
+        const isActive = current && current.path === item.path;
+        const card = document.createElement('div');
+        card.className = 'library-item' + (isActive ? ' active' : '');
+        card.innerHTML = `
+            <div class="library-thumb">${libraryItemThumb(kind, item)}</div>
+            <div class="library-name">${item.name.replace(/^\d+-/, '')}</div>
+            <div class="library-item-actions">
+                <button class="btn btn-secondary use-btn" ${isActive ? 'disabled' : ''}>${isActive ? '✓ In Use' : 'Use'}</button>
+                <button class="btn btn-danger delete-btn" ${isActive ? 'disabled title="Currently in use"' : ''}>🗑</button>
+            </div>`;
+        card.querySelector('.use-btn').addEventListener('click', () => {
+            if (kind === 'background') {
+                socket.emit('selectBackgroundMedia', { url: item.url, kind: (item.mimeType || '').startsWith('image/') ? 'image' : 'video', name: item.name, path: item.path });
+            } else {
+                socket.emit('selectMusicTrack', { url: item.url, name: item.name, path: item.path });
+            }
+        });
+        card.querySelector('.delete-btn').addEventListener('click', async () => {
+            if (!confirm(`Delete "${item.name}" from the library?`)) return;
+            const [folder, filename] = item.path.split('/');
+            const kindParam = folder === 'backgrounds' ? 'background' : 'music';
+            const { ok, data } = await apiFetch(`/api/media/${kindParam}/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+            if (!ok) { alert(data.error || 'Delete failed.'); return; }
+            loadLibrary(kind);
+        });
+        grid.appendChild(card);
+    });
+}
+
+async function loadLibrary(kind) {
+    const { ok, data } = await apiFetch(`/api/media/library?kind=${kind}`);
+    if (ok && Array.isArray(data)) {
+        if (kind === 'background') bgLibraryItems = data; else musicLibraryItems = data;
+    }
+    renderLibrary(kind);
+}
+
+function setUploadStatus(el, message, type) {
+    el.textContent = message;
+    el.className = 'upload-status' + (type ? ' ' + type : '');
+}
+
+async function handleUpload(kind, file, statusEl) {
+    if (!file) return;
+    setUploadStatus(statusEl, `Uploading ${file.name}…`);
+    const formData = new FormData();
+    formData.append('kind', kind);
+    formData.append('file', file);
+    try {
+        const { ok, data } = await apiFetch('/api/media/upload', { method: 'POST', body: formData });
+        if (!ok) { setUploadStatus(statusEl, data.error || 'Upload failed.', 'error'); return; }
+        setUploadStatus(statusEl, `Uploaded "${file.name}". Click "Use" to switch to it.`, 'success');
+        loadLibrary(kind);
+    } catch (e) {
+        setUploadStatus(statusEl, 'Upload failed — please try again.', 'error');
+    }
+}
+
+bgUploadInput.addEventListener('change', () => {
+    handleUpload('background', bgUploadInput.files[0], bgUploadStatus);
+    bgUploadInput.value = '';
+});
+musicUploadInput.addEventListener('change', () => {
+    handleUpload('music', musicUploadInput.files[0], musicUploadStatus);
+    musicUploadInput.value = '';
+});
+
+// =========================================================================
+// OBS TEXT DISPLAY
+// =========================================================================
+textOverlayPushBtn.addEventListener('click', () => {
+    socket.emit('updateTextOverlay', { text: textOverlayInput.value, visible: true });
+});
+textOverlayClearBtn.addEventListener('click', () => {
+    socket.emit('updateTextOverlay', { text: textOverlayInput.value, visible: false });
+});
+
+function applyTextOverlayState(overlay) {
+    if (!overlay) return;
+    // Only auto-fill the textarea once (on first sync / reconnect) so we never clobber
+    // whatever the operator is actively typing.
+    if (!textOverlaySynced) {
+        textOverlayInput.value = overlay.text || '';
+        textOverlaySynced = true;
+    }
+    textOverlayLiveIndicator.classList.toggle('hidden', !overlay.visible);
+}
+
+// =========================================================================
+// ACCOUNT — change password
+// =========================================================================
+changePasswordBtn.addEventListener('click', async () => {
+    const currentPassword = currentPasswordInput.value;
+    const newPassword     = newPasswordInput.value;
+    if (!newPassword || newPassword.length < 8) {
+        setUploadStatus(changePasswordStatus, 'New password must be at least 8 characters.', 'error');
+        return;
+    }
+    const { ok, data } = await apiFetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword })
+    });
+    if (!ok) { setUploadStatus(changePasswordStatus, data.error || 'Could not change password.', 'error'); return; }
+    setUploadStatus(changePasswordStatus, 'Password changed.', 'success');
+    currentPasswordInput.value = '';
+    newPasswordInput.value = '';
+});
+
+// =========================================================================
 // MODAL LOGIC (Template Editor)
 // =========================================================================
 function openModal(mode, tplId = null) {
@@ -407,7 +592,7 @@ function resolvePhase(state) {
     if (f === 'live')    return 'live';
     if (f === 'countdown') return 'countdown';
     if (f === 'pre' && state.startTime) {
-        return Date.now() < new Date(state.startTime).getTime() ? 'countdown' : 'pre';
+        return Date.now() < new Date(state.startTime).getTime() ? 'countdown' : 'delayed';
     }
     return 'pre';
 }
@@ -471,6 +656,13 @@ socket.on('stateSync', (state) => {
     serverState = state;
     updatePanelDisplay(state);
     updateMusicUI(state.music);
+
+    bgCurrentName.textContent    = (state.backgroundMedia && state.backgroundMedia.name) || '—';
+    musicCurrentName.textContent = (state.musicTrack && state.musicTrack.name) || '—';
+    renderLibrary('background');
+    renderLibrary('music');
+
+    applyTextOverlayState(state.textOverlay);
 });
 
 socket.on('templatesSync', (templates) => {
@@ -488,17 +680,6 @@ socket.on('templatesSync', (templates) => {
 
 startPanelTick();
 
-// =========================================================================
-// AUDIO FILE DETECTION
-// =========================================================================
-const nowPlayingEl = document.querySelector('.music-now-playing');
-fetch('/api/audio')
-    .then(r => r.json())
-    .then(data => {
-        if (nowPlayingEl) {
-            nowPlayingEl.textContent = data.file
-                ? `Now playing: ${data.file}`
-                : 'No audio file found in public/audio/';
-        }
-    })
-    .catch(() => {});
+// Initial media library load (stateSync re-renders these on every update after this)
+loadLibrary('background');
+loadLibrary('music');

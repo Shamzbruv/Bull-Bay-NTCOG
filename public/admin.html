@@ -19,9 +19,12 @@
                 <h1>Church Event Control Center</h1>
                 <p>Manage Screen State & Synchronization</p>
             </div>
-            <div class="status-indicator">
-                <span id="connection-dot" class="dot"></span>
-                <span id="connection-text">Connecting…</span>
+            <div style="display:flex;align-items:center;gap:1.25rem;">
+                <div class="status-indicator">
+                    <span id="connection-dot" class="dot"></span>
+                    <span id="connection-text">Connecting…</span>
+                </div>
+                <button id="logout-btn" class="btn btn-outline small-btn">Log Out</button>
             </div>
         </header>
 
@@ -118,45 +121,85 @@
         </div>
 
 
-        <!-- Music Controls -->
+        <!-- Media Library -->
+        <div class="dash-grid">
+            <!-- Background Media Library -->
+            <section class="glass-panel">
+                <h2>3. Background (Video / Image)</h2>
+                <p class="library-current">Now showing: <strong id="bg-current-name">—</strong></p>
+                <div id="bg-library-grid" class="library-grid"></div>
+                <label class="upload-btn btn btn-outline small-btn">
+                    ⬆ Upload Video or Image
+                    <input type="file" id="bg-upload-input" accept="video/*,image/*" hidden>
+                </label>
+                <p id="bg-upload-status" class="upload-status"></p>
+            </section>
+
+            <!-- Music Library -->
+            <section class="glass-panel">
+                <h2>4. Background Music</h2>
+                <p class="library-current">Now playing: <strong id="music-current-name">—</strong></p>
+                <div id="music-library-grid" class="library-grid"></div>
+                <label class="upload-btn btn btn-outline small-btn">
+                    ⬆ Upload Music Track
+                    <input type="file" id="music-upload-input" accept="audio/*" hidden>
+                </label>
+                <p id="music-upload-status" class="upload-status"></p>
+
+                <div class="music-playback-controls">
+                    <button id="music-toggle-btn" class="btn btn-secondary">▶ Play</button>
+                    <button id="music-restart-btn" class="btn btn-secondary" title="Restart from beginning">↺ Restart</button>
+                    <div class="music-loop-control">
+                        <label>Loop</label>
+                        <label class="switch">
+                            <input type="checkbox" id="music-loop-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="music-volume-control">
+                        <label>🔊</label>
+                        <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.6">
+                        <span id="music-volume-label">60%</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- OBS Text Display -->
         <section class="glass-panel" style="margin-top: 0;">
-            <h2 style="font-family:var(--font-heading);color:var(--color-gold);font-size:1.1rem;margin-bottom:1.25rem;">
-                🎵 Background Music</h2>
-            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-
-                <!-- Play/Pause -->
-                <button id="music-toggle-btn" class="btn btn-secondary" style="min-width:130px;">▶ Play</button>
-
-                <!-- Restart -->
-                <button id="music-restart-btn" class="btn btn-secondary" title="Restart from beginning">↺
-                    Restart</button>
-
-                <!-- Loop toggle -->
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <label style="color:#cbd5e1;font-size:0.9rem;white-space:nowrap;">Loop</label>
-                    <label class="switch">
-                        <input type="checkbox" id="music-loop-toggle" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-
-                <!-- Volume -->
-                <div style="display:flex;align-items:center;gap:0.75rem;flex:1;min-width:180px;">
-                    <label style="white-space:nowrap;color:#cbd5e1;font-size:0.9rem;">🔊</label>
-                    <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.6"
-                        style="flex:1;accent-color:var(--color-gold);cursor:pointer;">
-                    <span id="music-volume-label"
-                        style="color:var(--color-gold);font-weight:600;min-width:36px;">60%</span>
-                </div>
-
+            <h2>5. OBS Text Display <span class="section-hint">(lyrics, affirmations, scripture being read…)</span></h2>
+            <div class="form-group">
+                <textarea id="text-overlay-input" rows="4"
+                    placeholder="Type or paste lyrics, an affirmation, or the passage being read. Line breaks are kept as-is on screen."></textarea>
             </div>
-            <p class="music-now-playing" style="color:#475569;font-size:0.8rem;margin:0.75rem 0 0 0;">Detecting audio file...</p>
+            <div class="button-row">
+                <button id="text-overlay-push-btn" class="btn btn-primary" style="flex:2;">Show on OBS</button>
+                <button id="text-overlay-clear-btn" class="btn btn-secondary">Clear from OBS</button>
+            </div>
+            <p id="text-overlay-live-indicator" class="text-overlay-live hidden">🟢 Currently showing on OBS</p>
         </section>
 
+        <!-- Account -->
+        <section class="glass-panel" style="margin-top: 0;">
+            <h2>⚙ Account</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="current-password-input" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label>New Password (min. 8 characters)</label>
+                    <input type="password" id="new-password-input" autocomplete="new-password">
+                </div>
+            </div>
+            <button id="change-password-btn" class="btn btn-outline small-btn">Change Password</button>
+            <p id="change-password-status" class="upload-status"></p>
+        </section>
 
         <footer class="dash-footer">
             <a href="/" target="_blank" class="btn btn-outline" style="margin-right:1rem;">Launch Sanctuary Display</a>
-            <a href="/overlay.html" target="_blank" class="btn btn-outline">Launch OBS Overlay Link</a>
+            <a href="/overlay.html" target="_blank" class="btn btn-outline" style="margin-right:1rem;">Launch OBS Countdown Overlay</a>
+            <a href="/text-overlay.html" target="_blank" class="btn btn-outline">Launch OBS Text Overlay</a>
         </footer>
     </div>
 

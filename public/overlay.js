@@ -23,7 +23,9 @@ function resolvePhase(state) {
     if (forced === 'countdown') return 'countdown';
     if (forced === 'pre') {
         if (state.startTime) {
-            return Date.now() < new Date(state.startTime).getTime() ? 'countdown' : 'pre';
+            // Countdown hit zero but Go Live hasn't been pressed yet — show "Please Stand By"
+            // rather than "Starting Soon" again.
+            return Date.now() < new Date(state.startTime).getTime() ? 'countdown' : 'delayed';
         }
         return 'pre';
     }

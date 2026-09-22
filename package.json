@@ -14,7 +14,11 @@
   "author": "Grace Connect",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
+    "dotenv": "^18.0.2",
     "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "multer": "^2.4.0",
+    "socket.io": "^4.8.3",
+    "ws": "^8.21.3"
   }
 }

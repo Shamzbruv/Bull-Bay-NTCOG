@@ -9,10 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Looping background video — muted so it autoplays without a gesture -->
-    <video id="bg-video" autoplay loop muted playsinline>
-        <source src="video/loop-display.mp4" type="video/mp4">
-    </video>
+    <!-- Background media (video or image) — source is set dynamically by script.js from
+         whatever the admin has selected in the Media Library. Muted so video autoplays
+         without a gesture. -->
+    <video id="bg-video" class="hidden" autoplay loop muted playsinline></video>
+    <img id="bg-image" class="hidden" alt="">
+
 
     <!-- ====================================================================
          OUTRO LAYER — audio player + full-screen visual panel.

@@ -27,8 +27,9 @@ body {
     background: #000;
 }
 
-/* Full-screen looping background video */
-#bg-video {
+/* Full-screen background — either the looping video or a static image,
+   whichever the admin has selected in the Media Library. */
+#bg-video, #bg-image {
     position: fixed;
     top: 0;
     left: 0;
@@ -38,6 +39,7 @@ body {
     z-index: 0;           /* Above the black body but below everything else */
     pointer-events: none;
 }
+.hidden { display: none !important; }
 
 #container {
     position: relative;   /* Creates a stacking context above the video */

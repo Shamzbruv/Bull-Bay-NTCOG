@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const noticeBoardSection = document.getElementById('notice-board-section');
     const noticeEl           = document.getElementById('notice');
     const audioToast         = document.getElementById('audio-toast');
+    const bgVideoEl          = document.getElementById('bg-video');
+    const bgImageEl          = document.getElementById('bg-image');
 
     // --- OUTRO DOM REFS ---
     const outroAudio      = document.getElementById('outro-audio');
@@ -49,21 +51,50 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOverlayIdx    = -1;
 
     // =========================================================================
-    // MUSIC
+    // BACKGROUND MEDIA  (video or image — chosen in the admin's Media Library)
+    // =========================================================================
+    let currentBgUrl = null;
+
+    function applyBackgroundMedia(state) {
+        const media = state && state.backgroundMedia;
+        if (!media || !media.url) {
+            bgVideoEl.classList.add('hidden');
+            bgImageEl.classList.add('hidden');
+            return;
+        }
+        if (media.url === currentBgUrl) return; // already showing this one
+        currentBgUrl = media.url;
+
+        if (media.kind === 'image') {
+            bgVideoEl.pause();
+            bgVideoEl.removeAttribute('src');
+            bgVideoEl.classList.add('hidden');
+            bgImageEl.src = media.url;
+            bgImageEl.classList.remove('hidden');
+        } else {
+            bgImageEl.classList.add('hidden');
+            bgImageEl.removeAttribute('src');
+            bgVideoEl.src = media.url;
+            bgVideoEl.classList.remove('hidden');
+            bgVideoEl.play().catch(() => {}); // autoplay can still be blocked on some browsers; harmless if so
+        }
+    }
+
+    // =========================================================================
+    // MUSIC  (track chosen in the admin's Media Library)
     // =========================================================================
     const bgMusic        = document.getElementById('bg-music');
     let lastRestartPulse = null;
     let musicWanted      = false;
+    let currentTrackUrl  = null;
 
-    fetch('/api/audio')
-        .then(r => r.json())
-        .then(d => {
-            if (d.url && bgMusic) {
-                bgMusic.src = d.url;
-                bgMusic.load();
-            }
-        })
-        .catch(() => {});
+    function applyMusicTrack(state) {
+        const track = state && state.musicTrack;
+        const url = track && track.url ? track.url : null;
+        if (url === currentTrackUrl) return;
+        currentTrackUrl = url;
+        if (url) { bgMusic.src = url; bgMusic.load(); }
+    }
 
     function tryPlay() {
         if (!bgMusic || !musicWanted) return;
@@ -291,8 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const ev     = state.activeEvent;
-        const forced = state.forcedState;
+        const ev = state.activeEvent;
+        // Use the resolved phase, not the raw forcedState — a countdown that has hit zero
+        // resolves to 'delayed' even though the operator never pressed the Delayed button.
+        const phase = resolvePhase(state);
 
         churchNameEl.textContent  = (ev.name    || '').trim();
         serviceNameEl.textContent = (ev.subtitle || '').trim();
@@ -301,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const preMsgs     = Array.isArray(ev.preMessages)     ? ev.preMessages     : [];
         const delayedMsgs = Array.isArray(ev.delayedMessages) ? ev.delayedMessages : [];
 
-        if (forced === 'delayed') {
+        if (phase === 'delayed') {
             preMsg1.textContent = (delayedMsgs[0] || '').trim();
             preMsg2.textContent = (delayedMsgs[1] || '').trim();
         } else {
@@ -337,8 +370,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (f === 'delayed')   return 'delayed';
         if (f === 'live')      return 'live';
         if (f === 'countdown') return 'countdown';
-        if (f === 'pre' && state.startTime)
-            return Date.now() < new Date(state.startTime).getTime() ? 'countdown' : 'pre';
+        if (f === 'pre' && state.startTime) {
+            if (Date.now() < new Date(state.startTime).getTime()) return 'countdown';
+            // Countdown hit zero but the operator hasn't pressed Go Live yet — show the
+            // "please stand by" messaging instead of repeating the pre-service welcome.
+            return 'delayed';
+        }
         return 'pre';
     }
 
@@ -369,6 +406,8 @@ document.addEventListener('DOMContentLoaded', () => {
         serverState = state;
         applyEventContent(state);
         applyPhase(resolvePhase(state));
+        applyBackgroundMedia(state);
+        applyMusicTrack(state);
         applyMusic(state);
     });
 
