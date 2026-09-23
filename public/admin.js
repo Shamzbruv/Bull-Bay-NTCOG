@@ -57,11 +57,33 @@ const musicLibraryGrid = document.getElementById('music-library-grid');
 const musicUploadInput = document.getElementById('music-upload-input');
 const musicUploadStatus= document.getElementById('music-upload-status');
 
-// OBS text display
-const textOverlayInput         = document.getElementById('text-overlay-input');
-const textOverlayPushBtn       = document.getElementById('text-overlay-push-btn');
-const textOverlayClearBtn      = document.getElementById('text-overlay-clear-btn');
-const textOverlayLiveIndicator = document.getElementById('text-overlay-live-indicator');
+// OBS Lyrics & Text Display
+const lyricsPasteInput     = document.getElementById('lyrics-paste-input');
+const lyricsLoadBtn        = document.getElementById('lyrics-load-btn');
+const lyricsClearBtn       = document.getElementById('lyrics-clear-btn');
+const lyricsSegmentsEl     = document.getElementById('lyrics-segments');
+const lyricsPrevBtn        = document.getElementById('lyrics-prev-btn');
+const lyricsNextBtn        = document.getElementById('lyrics-next-btn');
+const lyricsPositionLabel  = document.getElementById('lyrics-position-label');
+const textOverlayToggleBtn = document.getElementById('text-overlay-toggle-btn');
+const previewFrame         = document.getElementById('text-overlay-preview-frame');
+const previewEmpty         = document.getElementById('text-overlay-preview-empty');
+const previewBox           = document.getElementById('text-overlay-preview-box');
+const previewContent       = document.getElementById('text-overlay-preview-content');
+const previewDivider       = document.getElementById('text-overlay-preview-divider');
+
+const styleFontSel   = document.getElementById('style-font');
+const styleSizeInput = document.getElementById('style-size');
+const styleSizeLabel = document.getElementById('style-size-label');
+const styleColorInput  = document.getElementById('style-color');
+const styleAccentInput = document.getElementById('style-accent');
+const styleEffectSel = document.getElementById('style-effect');
+const styleBgSel     = document.getElementById('style-bg');
+const styleAnimSel   = document.getElementById('style-anim');
+const styleUppercaseToggle = document.getElementById('style-uppercase');
+const styleDividerToggle   = document.getElementById('style-divider');
+const stylePosButtons   = document.querySelectorAll('#style-pos-row .choice-btn');
+const styleAlignButtons = document.querySelectorAll('#style-align-row .choice-btn');
 
 // Account
 const currentPasswordInput = document.getElementById('current-password-input');
@@ -86,7 +108,16 @@ let sanctuaryTVCount   = 0;    // count of connected sanctuary room clients
 // Media library state
 let bgLibraryItems    = [];
 let musicLibraryItems = [];
-let textOverlaySynced = false; // becomes true once the textarea has been filled from the server once
+
+// Lyrics / OBS Text Display state
+const DEFAULT_TEXT_OVERLAY_STYLE = {
+    fontFamily: 'heading', fontSize: 2.6, textColor: '#f8f9fa', accentColor: '#d4af37',
+    align: 'center', position: 'bottom', background: 'glass', textEffect: 'shadow',
+    animation: 'fade', uppercase: false, letterSpacing: 0, showDivider: true
+};
+let lyricsState = { visible: false, rawInput: '', segments: [], currentIndex: 0, style: DEFAULT_TEXT_OVERLAY_STYLE };
+let lyricsPasteSynced   = false; // becomes true once the paste box has been filled from the server once
+const previewRenderState = { lastKey: null };
 
 // =========================================================================
 // AUTH — logout + session-expiry handling
@@ -405,25 +436,135 @@ musicUploadInput.addEventListener('change', () => {
 });
 
 // =========================================================================
-// OBS TEXT DISPLAY
+// OBS LYRICS & TEXT DISPLAY
 // =========================================================================
-textOverlayPushBtn.addEventListener('click', () => {
-    socket.emit('updateTextOverlay', { text: textOverlayInput.value, visible: true });
+
+/** Splits pasted lyrics into verse/chorus/etc. segments on blank lines. A first line like
+ *  "[Verse 1]", "Chorus:", or "(Bridge)" is used as that segment's label and stripped out
+ *  of the on-screen text; otherwise segments are just numbered "Part 1", "Part 2", ... */
+function parseLyrics(raw) {
+    const blocks = raw.replace(/\r\n/g, '\n').split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean);
+    return blocks.map((block, i) => {
+        const lines = block.split('\n');
+        const first = lines[0].trim();
+        const m = first.match(/^[[(]?\s*(verse\s*\d*|pre-chorus|chorus|bridge|intro|outro|refrain|tag|hook)\s*\d*\s*[\])]?\s*[:-]?\s*$/i);
+        let label = null;
+        if (m && lines.length > 1) {
+            label = first.replace(/[[\]():-]/g, '').trim();
+            lines.shift();
+        }
+        return { label: label || `Part ${i + 1}`, text: lines.join('\n').trim() };
+    }).filter(seg => seg.text);
+}
+
+lyricsLoadBtn.addEventListener('click', () => {
+    const segments = parseLyrics(lyricsPasteInput.value);
+    if (!segments.length) { alert('Paste some lyrics first — separate verses with a blank line.'); return; }
+    socket.emit('updateTextOverlay', { rawInput: lyricsPasteInput.value, segments, currentIndex: 0 });
 });
-textOverlayClearBtn.addEventListener('click', () => {
-    socket.emit('updateTextOverlay', { text: textOverlayInput.value, visible: false });
+
+lyricsClearBtn.addEventListener('click', () => {
+    if (!confirm('Clear the loaded lyrics and hide the overlay?')) return;
+    lyricsPasteInput.value = '';
+    socket.emit('updateTextOverlay', { rawInput: '', segments: [], currentIndex: 0, visible: false });
 });
+
+function goToSegment(i) {
+    if (i < 0 || i >= lyricsState.segments.length) return;
+    socket.emit('updateTextOverlay', { currentIndex: i });
+}
+lyricsPrevBtn.addEventListener('click', () => goToSegment(lyricsState.currentIndex - 1));
+lyricsNextBtn.addEventListener('click', () => goToSegment(lyricsState.currentIndex + 1));
+
+textOverlayToggleBtn.addEventListener('click', () => {
+    socket.emit('updateTextOverlay', { visible: !lyricsState.visible });
+});
+
+/** Every style control sends the *whole* style object (current + this one change) — the
+ *  server merges/validates it, so this never needs to know the other fields' shape. */
+function emitStylePatch(patch) {
+    socket.emit('updateTextOverlay', { style: { ...lyricsState.style, ...patch } });
+}
+styleFontSel.addEventListener('change', () => emitStylePatch({ fontFamily: styleFontSel.value }));
+styleSizeInput.addEventListener('input', () => {
+    styleSizeLabel.textContent = `${styleSizeInput.value}rem`;
+    emitStylePatch({ fontSize: parseFloat(styleSizeInput.value) });
+});
+styleColorInput.addEventListener('input',  () => emitStylePatch({ textColor: styleColorInput.value }));
+styleAccentInput.addEventListener('input', () => emitStylePatch({ accentColor: styleAccentInput.value }));
+styleEffectSel.addEventListener('change',  () => emitStylePatch({ textEffect: styleEffectSel.value }));
+styleBgSel.addEventListener('change',      () => emitStylePatch({ background: styleBgSel.value }));
+styleAnimSel.addEventListener('change',    () => emitStylePatch({ animation: styleAnimSel.value }));
+styleUppercaseToggle.addEventListener('change', () => emitStylePatch({ uppercase: styleUppercaseToggle.checked }));
+styleDividerToggle.addEventListener('change',   () => emitStylePatch({ showDivider: styleDividerToggle.checked }));
+stylePosButtons.forEach(btn => btn.addEventListener('click', () => emitStylePatch({ position: btn.dataset.pos })));
+styleAlignButtons.forEach(btn => btn.addEventListener('click', () => emitStylePatch({ align: btn.dataset.align })));
+
+function renderSegmentNav() {
+    lyricsSegmentsEl.innerHTML = '';
+    lyricsState.segments.forEach((seg, i) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'lyrics-chip' + (i === lyricsState.currentIndex ? ' active' : '');
+        chip.textContent = seg.label;
+        chip.title = seg.text.split('\n')[0];
+        chip.addEventListener('click', () => goToSegment(i));
+        lyricsSegmentsEl.appendChild(chip);
+    });
+    lyricsPositionLabel.textContent = lyricsState.segments.length
+        ? `${lyricsState.currentIndex + 1} / ${lyricsState.segments.length} — ${lyricsState.segments[lyricsState.currentIndex].label}`
+        : '—';
+    lyricsPrevBtn.disabled = lyricsState.currentIndex <= 0;
+    lyricsNextBtn.disabled = lyricsState.currentIndex >= lyricsState.segments.length - 1;
+}
+
+/** Reflects the current style into the customize controls — needed after a reconnect, or
+ *  when another admin device changes the style, so both stay in sync. */
+function syncStyleControls(style) {
+    styleFontSel.value = style.fontFamily;
+    styleSizeInput.value = style.fontSize;
+    styleSizeLabel.textContent = `${style.fontSize}rem`;
+    styleColorInput.value = style.textColor;
+    styleAccentInput.value = style.accentColor;
+    styleEffectSel.value = style.textEffect;
+    styleBgSel.value = style.background;
+    styleAnimSel.value = style.animation;
+    styleUppercaseToggle.checked = style.uppercase;
+    styleDividerToggle.checked = style.showDivider;
+    stylePosButtons.forEach(b => b.classList.toggle('active-choice', b.dataset.pos === style.position));
+    styleAlignButtons.forEach(b => b.classList.toggle('active-choice', b.dataset.align === style.align));
+}
+
+const previewEls = { frame: previewFrame, box: previewBox, content: previewContent, divider: previewDivider };
+function renderPreview() {
+    previewEmpty.classList.toggle('hidden', lyricsState.segments.length > 0);
+    renderTextOverlayInto(previewEls, lyricsState, previewRenderState, { forceVisible: true });
+    syncStyleControls(lyricsState.style);
+}
 
 function applyTextOverlayState(overlay) {
     if (!overlay) return;
-    // Only auto-fill the textarea once (on first sync / reconnect) so we never clobber
-    // whatever the operator is actively typing.
-    if (!textOverlaySynced) {
-        textOverlayInput.value = overlay.text || '';
-        textOverlaySynced = true;
+    lyricsState = overlay;
+    if (!lyricsPasteSynced) {
+        lyricsPasteInput.value = overlay.rawInput || '';
+        lyricsPasteSynced = true;
     }
-    textOverlayLiveIndicator.classList.toggle('hidden', !overlay.visible);
+    renderSegmentNav();
+    renderPreview();
+    textOverlayToggleBtn.textContent = overlay.visible ? '⏹ Hide from OBS' : '▶ Show on OBS';
+    textOverlayToggleBtn.classList.toggle('is-live', overlay.visible);
 }
+
+// Keyboard shortcuts for fast verse-by-verse operation during a live song — ignored while
+// typing in any field, or while a modal is open, so they never hijack normal typing.
+document.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+    if (!modal.classList.contains('hidden') || !outroModal.classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight')      { e.preventDefault(); goToSegment(lyricsState.currentIndex + 1); }
+    else if (e.key === 'ArrowLeft')  { e.preventDefault(); goToSegment(lyricsState.currentIndex - 1); }
+    else if (e.code === 'Space')     { e.preventDefault(); socket.emit('updateTextOverlay', { visible: !lyricsState.visible }); }
+});
 
 // =========================================================================
 // ACCOUNT — change password

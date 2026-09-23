@@ -103,6 +103,51 @@ function saveTemplatesCache() {
 }
 
 // ===========================================================================
+// TEXT OVERLAY (lyrics / affirmations / scripture) — validation helpers
+// ===========================================================================
+const TEXT_OVERLAY_FONTS       = ['heading', 'elegant', 'body', 'bold', 'impact', 'script'];
+const TEXT_OVERLAY_ALIGNS      = ['left', 'center', 'right'];
+const TEXT_OVERLAY_POSITIONS   = ['top', 'middle', 'bottom'];
+const TEXT_OVERLAY_BACKGROUNDS = ['glass', 'solid', 'none'];
+const TEXT_OVERLAY_EFFECTS     = ['none', 'shadow', 'glow', 'outline', 'gradient'];
+const TEXT_OVERLAY_ANIMATIONS  = ['none', 'fade', 'slide'];
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+const DEFAULT_TEXT_OVERLAY_STYLE = {
+    fontFamily: 'heading', fontSize: 2.6, textColor: '#f8f9fa', accentColor: '#d4af37',
+    align: 'center', position: 'bottom', background: 'glass', textEffect: 'shadow',
+    animation: 'fade', uppercase: false, letterSpacing: 0, showDivider: true
+};
+
+/** Merges only well-formed, allow-listed fields onto `base` — this ends up as inline CSS
+ *  on a public page, so it's validated even though only an authenticated admin can set it. */
+function sanitizeTextOverlayStyle(input, base) {
+    const s = { ...base };
+    if (!input || typeof input !== 'object') return s;
+    if (TEXT_OVERLAY_FONTS.includes(input.fontFamily))       s.fontFamily = input.fontFamily;
+    if (typeof input.fontSize === 'number' && input.fontSize >= 1 && input.fontSize <= 6) s.fontSize = input.fontSize;
+    if (typeof input.textColor === 'string' && HEX_COLOR_RE.test(input.textColor))       s.textColor = input.textColor;
+    if (typeof input.accentColor === 'string' && HEX_COLOR_RE.test(input.accentColor))   s.accentColor = input.accentColor;
+    if (TEXT_OVERLAY_ALIGNS.includes(input.align))           s.align = input.align;
+    if (TEXT_OVERLAY_POSITIONS.includes(input.position))     s.position = input.position;
+    if (TEXT_OVERLAY_BACKGROUNDS.includes(input.background)) s.background = input.background;
+    if (TEXT_OVERLAY_EFFECTS.includes(input.textEffect))     s.textEffect = input.textEffect;
+    if (TEXT_OVERLAY_ANIMATIONS.includes(input.animation))   s.animation = input.animation;
+    if (typeof input.uppercase === 'boolean')                s.uppercase = input.uppercase;
+    if (typeof input.letterSpacing === 'number' && input.letterSpacing >= -0.05 && input.letterSpacing <= 0.5) s.letterSpacing = input.letterSpacing;
+    if (typeof input.showDivider === 'boolean')              s.showDivider = input.showDivider;
+    return s;
+}
+
+function sanitizeSegments(input) {
+    if (!Array.isArray(input)) return null;
+    return input.slice(0, 200).map(seg => ({
+        label: typeof seg?.label === 'string' ? seg.label.slice(0, 60) : 'Part',
+        text:  typeof seg?.text  === 'string' ? seg.text.slice(0, 4000) : ''
+    })).filter(seg => seg.text);
+}
+
+// ===========================================================================
 // RUNTIME / SETTINGS PERSISTENCE  (survives server restarts and redeploys)
 // ===========================================================================
 async function loadSettings() {
@@ -114,7 +159,17 @@ async function loadSettings() {
     ]);
     if (bg)    appState.backgroundMedia = bg;
     if (music) appState.musicTrack      = music;
-    if (text)  appState.textOverlay     = text;
+    if (text && typeof text === 'object') {
+        // Merged rather than assigned outright — an earlier version of this app persisted
+        // textOverlay as just { visible, text }, and this safely upgrades that shape too.
+        appState.textOverlay = {
+            visible:      typeof text.visible === 'boolean' ? text.visible : appState.textOverlay.visible,
+            rawInput:     typeof text.rawInput === 'string' ? text.rawInput.slice(0, 20000) : appState.textOverlay.rawInput,
+            segments:     Array.isArray(text.segments) ? (sanitizeSegments(text.segments) || []) : appState.textOverlay.segments,
+            currentIndex: Number.isInteger(text.currentIndex) ? text.currentIndex : appState.textOverlay.currentIndex,
+            style:        sanitizeTextOverlayStyle(text.style, appState.textOverlay.style)
+        };
+    }
 
     let resumedRuntime = runtime;
     if (!db.enabled) {
@@ -168,7 +223,13 @@ let appState = {
     sanctuaryOverride: null,  // only emitted in full to the 'sanctuary' room
     backgroundMedia:   null,  // { url, kind: 'video'|'image', name, path } — set from the Media Library
     musicTrack:        null,  // { url, name, path } — set from the Media Library
-    textOverlay:       { visible: false, text: '' } // pushed to the OBS text overlay (lyrics/affirmations/reading)
+    textOverlay:       {      // OBS Lyrics & Text Display (separate transparent overlay)
+        visible:      false,
+        rawInput:     '',           // the operator's pasted lyrics, kept so it can be re-split later
+        segments:     [],           // [{ label, text }] — one per verse/chorus/etc.
+        currentIndex: 0,            // which segment is on screen
+        style:        DEFAULT_TEXT_OVERLAY_STYLE
+    }
 };
 
 let outroTimerHandle = null;
@@ -443,14 +504,23 @@ io.on('connection', (socket) => {
         broadcastState();
     }));
 
-    // --- OBS TEXT OVERLAY (lyrics / affirmations / scripture reading) ---
-    socket.on('updateTextOverlay', ifAdmin((data) => {
-        if (!data) return;
-        appState.textOverlay = {
-            visible: !!data.visible,
-            text: typeof data.text === 'string' ? data.text.slice(0, 4000) : appState.textOverlay.text
-        };
-        db.setSetting('textOverlay', appState.textOverlay).catch(() => {});
+    // --- OBS LYRICS & TEXT DISPLAY (lyrics / affirmations / scripture reading) ---
+    // Accepts a partial patch — the admin panel sends only the field(s) that changed
+    // (loading new lyrics, stepping to another verse, a style tweak, or show/hide).
+    socket.on('updateTextOverlay', ifAdmin((patch) => {
+        if (!patch || typeof patch !== 'object') return;
+        const to = appState.textOverlay;
+        if (typeof patch.rawInput === 'string') to.rawInput = patch.rawInput.slice(0, 20000);
+        if (patch.segments !== undefined) {
+            const seg = sanitizeSegments(patch.segments);
+            if (seg) to.segments = seg;
+        }
+        if (Number.isInteger(patch.currentIndex)) {
+            to.currentIndex = Math.max(0, Math.min(patch.currentIndex, Math.max(0, to.segments.length - 1)));
+        }
+        if (typeof patch.visible === 'boolean') to.visible = patch.visible;
+        if (patch.style !== undefined) to.style = sanitizeTextOverlayStyle(patch.style, to.style);
+        db.setSetting('textOverlay', to).catch(() => {});
         broadcastState();
     }));
 

@@ -1,8 +1,5 @@
-:root {
-    --color-gold: #d4af37;
-    --font-heading: 'Cinzel', serif;
-    --font-body: 'Outfit', sans-serif;
-}
+/* Page chrome only — the actual overlay look lives in text-overlay-components.css,
+   shared with the admin panel's live preview. */
 
 /* CRITICAL: For OBS Browser Source, body must be completely transparent. */
 body {
@@ -10,10 +7,10 @@ body {
     padding: 4vh 6vw;
     background-color: transparent !important;
     color: #f8f9fa;
-    font-family: var(--font-body);
+    font-family: 'Outfit', sans-serif;
     display: flex;
     justify-content: center;
-    align-items: flex-end; /* text sits in the lower third, out of the way of a speaker/stream */
+    align-items: flex-end; /* overridden per-render to match the chosen position (top/middle/bottom) */
     height: 100vh;
     box-sizing: border-box;
     overflow: hidden;
@@ -21,33 +18,4 @@ body {
 
 .hidden {
     display: none !important;
-}
-
-#text-overlay-box {
-    background: rgba(0, 0, 0, 0.62);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    border-radius: 14px;
-    padding: 2rem 3rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    text-align: center;
-    max-width: 85vw;
-    animation: textOverlayIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-}
-
-@keyframes textOverlayIn {
-    0%   { transform: translateY(20px); opacity: 0; }
-    100% { transform: translateY(0);    opacity: 1; }
-}
-
-#text-overlay-content {
-    margin: 0;
-    font-family: var(--font-heading);
-    font-size: 2.6rem;
-    line-height: 1.4;
-    font-weight: 600;
-    color: #f8f9fa;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
-    white-space: pre-wrap; /* preserve the operator's own line breaks (verse lines, etc.) */
 }

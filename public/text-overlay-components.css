@@ -1,0 +1,78 @@
+/* ============================================================
+   TEXT OVERLAY — shared "flare" component styles.
+   Used by both text-overlay.html (the real OBS source) and
+   admin.html (the live preview), driven by CSS custom properties
+   set from JS in text-overlay-render.js.
+   ============================================================ */
+
+.to-box {
+    --to-color: #f8f9fa;
+    --to-accent: #d4af37;
+    --to-size: 2.6rem;
+    --to-family: 'Cinzel', serif;
+    --to-align: center;
+    --to-tracking: 0em;
+
+    display: inline-block;
+    padding: 2rem 3rem;
+    border-radius: 14px;
+    max-width: 85vw;
+    box-sizing: border-box;
+    text-align: var(--to-align);
+}
+.to-box.hidden { display: none !important; }
+
+.to-box.to-bg-glass {
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.to-box.to-bg-solid {
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.to-box.to-bg-none {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.to-divider {
+    width: 90px;
+    height: 2px;
+    margin: 0 auto 1.1rem auto;
+    background: linear-gradient(90deg, transparent, var(--to-accent), transparent);
+}
+.to-box[data-align="left"]  .to-divider { margin-left: 0; }
+.to-box[data-align="right"] .to-divider { margin-right: 0; }
+
+.to-content {
+    margin: 0;
+    font-family: var(--to-family);
+    font-size: var(--to-size);
+    color: var(--to-color);
+    line-height: 1.4;
+    font-weight: 600;
+    white-space: pre-wrap; /* keep the operator's own line breaks inside a verse */
+    letter-spacing: var(--to-tracking);
+}
+.to-content.to-uppercase { text-transform: uppercase; }
+
+.to-content.to-fx-none    { text-shadow: none; }
+.to-content.to-fx-shadow  { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); }
+.to-content.to-fx-glow    { text-shadow: 0 0 10px var(--to-accent), 0 0 28px var(--to-accent), 0 2px 10px rgba(0, 0, 0, 0.8); }
+.to-content.to-fx-outline { -webkit-text-stroke: 1.5px var(--to-accent); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+.to-content.to-fx-gradient {
+    background: linear-gradient(135deg, var(--to-color), var(--to-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes toFadeIn  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toSlideIn { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: translateY(0); } }
+.to-box.to-anim-fade  { animation: toFadeIn 0.5s ease forwards; }
+.to-box.to-anim-slide { animation: toSlideIn 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) forwards; }

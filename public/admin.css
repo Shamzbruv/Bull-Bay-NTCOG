@@ -635,3 +635,160 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: -0.5rem 0 1rem 0;
     text-align: center;
 }
+
+/* ============================================================
+   OBS LYRICS & TEXT DISPLAY
+   ============================================================ */
+.lyrics-panel .panel-header { align-items: flex-start; }
+.lyrics-panel .panel-header h2 { margin-bottom: 0; }
+
+#text-overlay-toggle-btn {
+    width: auto;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+#text-overlay-toggle-btn.is-live {
+    background: rgba(46, 204, 113, 0.18);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.lyrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+@media (max-width: 900px) {
+    .lyrics-grid { grid-template-columns: 1fr; }
+}
+.lyrics-col { display: flex; flex-direction: column; }
+#lyrics-paste-input { min-height: 150px; resize: vertical; font-size: 0.85rem; line-height: 1.5; }
+
+.lyrics-segments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    max-height: 130px;
+    overflow-y: auto;
+}
+.lyrics-chip {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--color-glass-border);
+    color: #cbd5e1;
+    border-radius: 20px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: all 0.15s ease;
+}
+.lyrics-chip:hover { background: rgba(255, 255, 255, 0.12); }
+.lyrics-chip.active {
+    background: rgba(212, 175, 55, 0.18);
+    border-color: var(--color-gold);
+    color: var(--color-gold);
+    font-weight: 600;
+}
+
+.lyrics-nav-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: auto;
+    padding-top: 1rem;
+}
+.lyrics-nav-controls .btn { flex: 0 0 auto; min-width: 90px; }
+.lyrics-position-label {
+    color: var(--color-gold);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: center;
+    flex: 1;
+}
+
+/* Checkerboard "transparent" preview frame, simulating an OBS canvas */
+.to-preview-frame {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background-color: #2a2a2a;
+    background-image:
+        linear-gradient(45deg, #3a3a3a 25%, transparent 25%),
+        linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #3a3a3a 75%),
+        linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* default; overridden per-render to match the chosen position */
+    padding: 5%;
+    box-sizing: border-box;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--color-glass-border);
+}
+.to-preview-empty {
+    margin: auto;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    text-align: center;
+    max-width: 70%;
+}
+/* Scale the preview down from real OBS size to fit the little frame. A plain font-size
+   rule won't do this — .to-content's size is in `rem`, which ignores ancestor font-size
+   and is always relative to the root <html> element — so this uses a transform instead. */
+.to-preview-frame .to-box { transform: scale(0.5); }
+
+.customize-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem 1.25rem;
+}
+.customize-grid .form-group { margin-bottom: 0; }
+.customize-grid label { font-size: 0.8rem; }
+.customize-grid select {
+    width: 100%;
+    padding: 0.6rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 6px;
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+}
+.customize-grid input[type="color"] {
+    width: 44px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--color-glass-border);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    margin-left: auto;
+}
+.customize-grid input[type="range"] {
+    width: 100%;
+    accent-color: var(--color-gold);
+    cursor: pointer;
+}
+#style-size-label {
+    color: var(--color-gold);
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.choice-row { gap: 0.4rem; }
+.choice-btn {
+    flex: 1;
+    padding: 0.5rem 0.4rem;
+    font-size: 0.75rem;
+}
+.choice-btn.active-choice {
+    background: rgba(212, 175, 55, 0.18);
+    border: 1px solid var(--color-gold);
+    color: var(--color-gold);
+}

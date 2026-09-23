@@ -7,8 +7,9 @@
     <title>Event Control Panel</title>
     <link rel="icon" href="favicon.png" type="image/png">
     <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Outfit:wght@300;400;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,600;1,600&family=Montserrat:wght@700;800&family=Bebas+Neue&family=Great+Vibes&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="text-overlay-components.css">
     <link rel="stylesheet" href="admin.css">
 </head>
 
@@ -165,18 +166,140 @@
             </section>
         </div>
 
-        <!-- OBS Text Display -->
-        <section class="glass-panel" style="margin-top: 0;">
-            <h2>5. OBS Text Display <span class="section-hint">(lyrics, affirmations, scripture being read…)</span></h2>
-            <div class="form-group">
-                <textarea id="text-overlay-input" rows="4"
-                    placeholder="Type or paste lyrics, an affirmation, or the passage being read. Line breaks are kept as-is on screen."></textarea>
+        <!-- OBS Lyrics & Text Display -->
+        <section class="glass-panel lyrics-panel" style="margin-top: 0;">
+            <div class="panel-header">
+                <h2>5. OBS Lyrics & Text Display <span class="section-hint">(lyrics, affirmations, scripture being read…)</span></h2>
+                <button id="text-overlay-toggle-btn" class="btn btn-outro small-btn">▶ Show on OBS</button>
             </div>
-            <div class="button-row">
-                <button id="text-overlay-push-btn" class="btn btn-primary" style="flex:2;">Show on OBS</button>
-                <button id="text-overlay-clear-btn" class="btn btn-secondary">Clear from OBS</button>
+
+            <div class="lyrics-grid">
+                <!-- Paste + verse navigator -->
+                <div class="lyrics-col">
+                    <div class="form-group">
+                        <label>Paste Full Lyrics
+                            <span class="section-hint">separate verses/chorus with a blank line — label lines like
+                                "Verse 1" or "Chorus" are auto-detected and hidden from the screen</span>
+                        </label>
+                        <textarea id="lyrics-paste-input" rows="8" placeholder="[Verse 1]
+Amazing grace, how sweet the sound
+That saved a wretch like me
+
+[Chorus]
+I once was lost but now am found
+Was blind but now I see"></textarea>
+                    </div>
+                    <div class="button-row">
+                        <button id="lyrics-load-btn" class="btn btn-primary" style="flex:2;">Split Into Verses</button>
+                        <button id="lyrics-clear-btn" class="btn btn-secondary">🗑 Clear</button>
+                    </div>
+
+                    <div id="lyrics-segments" class="lyrics-segments"></div>
+
+                    <div class="lyrics-nav-controls">
+                        <button id="lyrics-prev-btn" class="btn btn-secondary" disabled>◀ Prev</button>
+                        <span id="lyrics-position-label" class="lyrics-position-label">—</span>
+                        <button id="lyrics-next-btn" class="btn btn-secondary" disabled>Next ▶</button>
+                    </div>
+                    <p class="section-hint">Keyboard shortcuts (while not typing in a field): ← → to change verse,
+                        Space to show/hide on OBS.</p>
+                </div>
+
+                <!-- Live preview + customize -->
+                <div class="lyrics-col">
+                    <label>Live Preview <span class="section-hint">(checkerboard = transparent in OBS)</span></label>
+                    <div id="text-overlay-preview-frame" class="to-preview-frame">
+                        <p id="text-overlay-preview-empty" class="to-preview-empty">Paste lyrics and click "Split Into
+                            Verses" to preview here.</p>
+                        <div id="text-overlay-preview-box" class="to-box hidden">
+                            <div id="text-overlay-preview-divider" class="to-divider"></div>
+                            <p id="text-overlay-preview-content" class="to-content"></p>
+                        </div>
+                    </div>
+
+                    <div class="customize-grid">
+                        <div class="form-group">
+                            <label>Font</label>
+                            <select id="style-font">
+                                <option value="heading">Cinzel — Elegant Serif</option>
+                                <option value="elegant">Playfair Display — Classic</option>
+                                <option value="body">Outfit — Clean Sans</option>
+                                <option value="bold">Montserrat — Bold</option>
+                                <option value="impact">Bebas Neue — Display</option>
+                                <option value="script">Great Vibes — Script</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Size <span id="style-size-label">2.6rem</span></label>
+                            <input type="range" id="style-size" min="1.5" max="5" step="0.1" value="2.6">
+                        </div>
+                        <div class="form-group row align-center">
+                            <label>Text Color</label>
+                            <input type="color" id="style-color" value="#f8f9fa">
+                        </div>
+                        <div class="form-group row align-center">
+                            <label>Accent / Flare Color</label>
+                            <input type="color" id="style-accent" value="#d4af37">
+                        </div>
+                        <div class="form-group">
+                            <label>Text Effect</label>
+                            <select id="style-effect">
+                                <option value="shadow">Soft Shadow</option>
+                                <option value="glow">Glow</option>
+                                <option value="outline">Outline</option>
+                                <option value="gradient">Gradient</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Background Box</label>
+                            <select id="style-bg">
+                                <option value="glass">Glass Panel</option>
+                                <option value="solid">Solid</option>
+                                <option value="none">None (text only)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Position on Screen</label>
+                            <div class="button-row choice-row" id="style-pos-row">
+                                <button type="button" class="btn btn-secondary choice-btn" data-pos="top">Top</button>
+                                <button type="button" class="btn btn-secondary choice-btn" data-pos="middle">Middle</button>
+                                <button type="button" class="btn btn-secondary choice-btn" data-pos="bottom">Bottom</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Text Align</label>
+                            <div class="button-row choice-row" id="style-align-row">
+                                <button type="button" class="btn btn-secondary choice-btn" data-align="left">Left</button>
+                                <button type="button" class="btn btn-secondary choice-btn" data-align="center">Center</button>
+                                <button type="button" class="btn btn-secondary choice-btn" data-align="right">Right</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Entrance Animation</label>
+                            <select id="style-anim">
+                                <option value="fade">Fade</option>
+                                <option value="slide">Slide Up</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        <div class="form-group row align-center">
+                            <label>Uppercase</label>
+                            <label class="switch">
+                                <input type="checkbox" id="style-uppercase">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="form-group row align-center">
+                            <label>Decorative Divider</label>
+                            <label class="switch">
+                                <input type="checkbox" id="style-divider" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p id="text-overlay-live-indicator" class="text-overlay-live hidden">🟢 Currently showing on OBS</p>
         </section>
 
         <!-- Account -->
@@ -312,6 +435,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="text-overlay-render.js"></script>
     <script src="admin.js"></script>
 </body>
 
