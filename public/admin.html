@@ -173,6 +173,19 @@
                 <button id="text-overlay-toggle-btn" class="btn btn-outro small-btn">▶ Show on OBS</button>
             </div>
 
+            <!-- Song Library -->
+            <div class="song-library">
+                <div class="song-library-header">
+                    <input type="text" id="song-search-input"
+                        placeholder="🔍 Search your saved songs — title, artist, or a lyric phrase…">
+                    <button id="save-song-btn" class="btn btn-outline small-btn">💾 Save Current as Song</button>
+                </div>
+                <div id="song-library-list" class="song-library-list">
+                    <p class="library-empty">No songs saved yet.</p>
+                </div>
+                <p id="now-editing-label" class="now-editing-label hidden">Now editing: <strong id="now-editing-title"></strong></p>
+            </div>
+
             <div class="lyrics-grid">
                 <!-- Paste + verse navigator -->
                 <div class="lyrics-col">

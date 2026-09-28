@@ -18,8 +18,9 @@ Set the same three in a local `.env` file for development (see `.env.example`).
 
 This project shares its Supabase project with another app ("Bull Bay NTCOG
 Games"). Everything this app owns is kept out of that app's way:
-- tables `countdown_templates` and `countdown_settings` (prefixed, RLS on,
-  no policies — only reachable with the service key, never from a browser)
+- tables `countdown_templates`, `countdown_settings`, and `countdown_songs`
+  (prefixed, RLS on, no policies — only reachable with the service key,
+  never from a browser)
 - its own storage bucket, `countdown-media`
 
 ## Admin login
@@ -40,14 +41,31 @@ without touching code or redeploying. Files live in Supabase Storage
 (`countdown-media` bucket), so they persist across redeploys and are shared
 by every server instance. Max upload size: 50MB per file.
 
-## OBS Text Display
+## OBS Lyrics & Text Display
 
 A second, independent OBS browser source at `/text-overlay.html` — add it
 as its own Browser Source in OBS, positioned wherever you like (it's fully
-transparent, same as the countdown overlay at `/overlay.html`). Push lyrics,
-an affirmation, or the passage being read from Admin → **5. OBS Text
-Display**. "Clear from OBS" hides it without erasing what you typed, so you
-can bring the same text back with one click.
+transparent, same as the countdown overlay at `/overlay.html`). Paste full
+lyrics into Admin → **5. OBS Lyrics & Text Display** and click "Split Into
+Verses" to break them into a navigable verse/chorus list (← → or Prev/Next
+to step through live, Space to show/hide). The same section also works for
+a one-off affirmation or a scripture passage — just paste it and show it.
+
+**Song Library** (inside that same section): "💾 Save Current as Song"
+stores whatever's in the paste box under a title/artist you give it, so it
+can be found later by clicking it in the list, or by typing a search that
+matches the title, artist, *or any lyric phrase* in the saved text. Saving
+under a title that already exists updates that song instead of duplicating
+it. Songs are stored in Supabase (`countdown_songs`), so they persist
+across redeploys and are shared by anyone logged into the admin panel.
+
+There's no built-in web lyrics search — every legitimate way to search
+lyrics by phrase (Genius, Musixmatch, etc.) requires a developer account and
+API key, which needs a human to sign up for; scraping a search engine or a
+lyrics site to fake it would violate those sites' terms and isn't reliable
+enough for something that has to work every Sunday. If it's ever wanted,
+the lightest path is a free Genius API token (a couple of minutes to sign
+up for), pasted in as an env var.
 
 ## Templates
 

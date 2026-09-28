@@ -792,3 +792,93 @@ input:checked + .slider:before { transform: translateX(22px); }
     border: 1px solid var(--color-gold);
     color: var(--color-gold);
 }
+
+/* ============================================================
+   SONG LIBRARY
+   ============================================================ */
+.song-library {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.song-library-header {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+#song-search-input {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.6rem 0.9rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 6px;
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+}
+#save-song-btn { width: auto; white-space: nowrap; }
+
+.song-library-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.song-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+.song-item:hover {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.25);
+}
+.song-item-info {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+}
+.song-item-title {
+    color: var(--color-text-main);
+    font-weight: 600;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.song-item-artist {
+    color: #64748b;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.song-delete-btn {
+    width: auto;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.now-editing-label {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+.now-editing-label strong { color: var(--color-gold); }

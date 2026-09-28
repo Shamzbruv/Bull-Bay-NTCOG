@@ -85,6 +85,13 @@ const styleDividerToggle   = document.getElementById('style-divider');
 const stylePosButtons   = document.querySelectorAll('#style-pos-row .choice-btn');
 const styleAlignButtons = document.querySelectorAll('#style-align-row .choice-btn');
 
+// Song Library
+const songSearchInput  = document.getElementById('song-search-input');
+const saveSongBtn      = document.getElementById('save-song-btn');
+const songLibraryListEl= document.getElementById('song-library-list');
+const nowEditingLabel  = document.getElementById('now-editing-label');
+const nowEditingTitle  = document.getElementById('now-editing-title');
+
 // Account
 const currentPasswordInput = document.getElementById('current-password-input');
 const newPasswordInput     = document.getElementById('new-password-input');
@@ -115,9 +122,12 @@ const DEFAULT_TEXT_OVERLAY_STYLE = {
     align: 'center', position: 'bottom', background: 'glass', textEffect: 'shadow',
     animation: 'fade', uppercase: false, letterSpacing: 0, showDivider: true
 };
-let lyricsState = { visible: false, rawInput: '', segments: [], currentIndex: 0, style: DEFAULT_TEXT_OVERLAY_STYLE };
+let lyricsState = { visible: false, rawInput: '', segments: [], currentIndex: 0, songTitle: '', style: DEFAULT_TEXT_OVERLAY_STYLE };
 let lyricsPasteSynced   = false; // becomes true once the paste box has been filled from the server once
 const previewRenderState = { lastKey: null };
+
+// Song Library state
+let songLibrary = [];
 
 // =========================================================================
 // AUTH — logout + session-expiry handling
@@ -157,6 +167,11 @@ function toLocalInputValue(d) {
 }
 
 function padZ(n) { return String(Math.floor(Math.abs(n))).padStart(2, '0'); }
+
+/** Escapes text dropped into an innerHTML template (media/song names, artists, etc.). */
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function formatCountdown(msRemaining) {
     if (msRemaining <= 0) return '00:00';
@@ -373,7 +388,7 @@ function renderLibrary(kind) {
         card.className = 'library-item' + (isActive ? ' active' : '');
         card.innerHTML = `
             <div class="library-thumb">${libraryItemThumb(kind, item)}</div>
-            <div class="library-name">${item.name.replace(/^\d+-/, '')}</div>
+            <div class="library-name">${escapeHtml(item.name.replace(/^\d+-/, ''))}</div>
             <div class="library-item-actions">
                 <button class="btn btn-secondary use-btn" ${isActive ? 'disabled' : ''}>${isActive ? '✓ In Use' : 'Use'}</button>
                 <button class="btn btn-danger delete-btn" ${isActive ? 'disabled title="Currently in use"' : ''}>🗑</button>
@@ -458,15 +473,80 @@ function parseLyrics(raw) {
 }
 
 lyricsLoadBtn.addEventListener('click', () => {
-    const segments = parseLyrics(lyricsPasteInput.value);
+    const raw = lyricsPasteInput.value;
+    const segments = parseLyrics(raw);
     if (!segments.length) { alert('Paste some lyrics first — separate verses with a blank line.'); return; }
-    socket.emit('updateTextOverlay', { rawInput: lyricsPasteInput.value, segments, currentIndex: 0 });
+    // Re-splitting the same text that's already loaded (e.g. after navigating) keeps the
+    // "Now editing" label; pasting something different means it's no longer that saved song.
+    const songTitle = raw === lyricsState.rawInput ? lyricsState.songTitle : '';
+    socket.emit('updateTextOverlay', { rawInput: raw, segments, currentIndex: 0, songTitle });
+});
+
+// =========================================================================
+// SONG LIBRARY — save the current lyrics for reuse, and search/click to reload them
+// =========================================================================
+socket.on('songLibrarySync', (songs) => {
+    songLibrary = Array.isArray(songs) ? songs : [];
+    renderSongLibrary();
+});
+
+function renderSongLibrary() {
+    const q = songSearchInput.value.trim().toLowerCase();
+    const filtered = q
+        ? songLibrary.filter(s =>
+            s.title.toLowerCase().includes(q) ||
+            (s.artist || '').toLowerCase().includes(q) ||
+            s.rawInput.toLowerCase().includes(q)) // matches a lyric phrase/snippet too
+        : songLibrary;
+
+    songLibraryListEl.innerHTML = '';
+    if (!filtered.length) {
+        songLibraryListEl.innerHTML = `<p class="library-empty">${songLibrary.length ? 'No matches.' : 'No songs saved yet.'}</p>`;
+        return;
+    }
+    filtered.forEach(song => {
+        const row = document.createElement('div');
+        row.className = 'song-item';
+        row.innerHTML = `
+            <div class="song-item-info">
+                <span class="song-item-title">${escapeHtml(song.title)}</span>
+                ${song.artist ? `<span class="song-item-artist">${escapeHtml(song.artist)}</span>` : ''}
+            </div>
+            <button type="button" class="btn btn-danger song-delete-btn" title="Delete this song">🗑</button>`;
+        row.querySelector('.song-item-info').addEventListener('click', () => loadSong(song));
+        row.querySelector('.song-delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete "${song.title}" from the song library? This can't be undone.`)) socket.emit('deleteSong', song.id);
+        });
+        songLibraryListEl.appendChild(row);
+    });
+}
+songSearchInput.addEventListener('input', renderSongLibrary);
+
+function loadSong(song) {
+    const segments = parseLyrics(song.rawInput);
+    if (!segments.length) { alert('This song has no valid verses saved — check its text.'); return; }
+    lyricsPasteInput.value = song.rawInput;
+    socket.emit('updateTextOverlay', { rawInput: song.rawInput, segments, currentIndex: 0, songTitle: song.title });
+}
+
+saveSongBtn.addEventListener('click', () => {
+    const raw = lyricsPasteInput.value.trim();
+    if (!raw) { alert('Paste some lyrics first.'); return; }
+    const title = prompt('Song title:', lyricsState.songTitle || '');
+    if (title === null) return; // cancelled
+    if (!title.trim()) { alert('A title is required.'); return; }
+    const artist = prompt('Artist / writer (optional):', '');
+    if (artist === null) return; // cancelled
+    // Saving under a title that already exists in the library updates that song instead of duplicating it.
+    const existing = songLibrary.find(s => s.title.toLowerCase() === title.trim().toLowerCase());
+    socket.emit('saveSong', { id: existing ? existing.id : undefined, title: title.trim(), artist: artist.trim(), rawInput: raw });
 });
 
 lyricsClearBtn.addEventListener('click', () => {
     if (!confirm('Clear the loaded lyrics and hide the overlay?')) return;
     lyricsPasteInput.value = '';
-    socket.emit('updateTextOverlay', { rawInput: '', segments: [], currentIndex: 0, visible: false });
+    socket.emit('updateTextOverlay', { rawInput: '', segments: [], currentIndex: 0, visible: false, songTitle: '' });
 });
 
 function goToSegment(i) {
@@ -553,6 +633,9 @@ function applyTextOverlayState(overlay) {
     renderPreview();
     textOverlayToggleBtn.textContent = overlay.visible ? '⏹ Hide from OBS' : '▶ Show on OBS';
     textOverlayToggleBtn.classList.toggle('is-live', overlay.visible);
+
+    nowEditingLabel.classList.toggle('hidden', !overlay.songTitle);
+    nowEditingTitle.textContent = overlay.songTitle || '';
 }
 
 // Keyboard shortcuts for fast verse-by-verse operation during a live song — ignored while

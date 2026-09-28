@@ -94,6 +94,28 @@ async function loadTemplates() {
     saveTemplatesCache();
 }
 
+// ===========================================================================
+// SONG LIBRARY  (Admin → OBS Lyrics & Text Display → save/load a song)
+// ===========================================================================
+let songLibrary = []; // [{ id, title, artist, rawInput }] — admin-only, not sent to sanctuary/overlay clients
+
+async function loadSongLibrary() {
+    songLibrary = db.enabled ? await db.loadSongsFromSupabase() : [];
+}
+
+function sanitizeSong(input, existingId) {
+    if (!input || typeof input !== 'object') return null;
+    const title = typeof input.title === 'string' ? input.title.trim().slice(0, 120) : '';
+    const rawInput = typeof input.rawInput === 'string' ? input.rawInput.trim().slice(0, 20000) : '';
+    if (!title || !rawInput) return null;
+    return {
+        id: existingId || input.id || ('song_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+        title,
+        artist: typeof input.artist === 'string' ? input.artist.trim().slice(0, 120) : '',
+        rawInput
+    };
+}
+
 function saveTemplatesCache() {
     try {
         fs.writeFileSync(TEMPLATES_CACHE_FILE, JSON.stringify(eventTemplates, null, 2));
@@ -167,6 +189,7 @@ async function loadSettings() {
             rawInput:     typeof text.rawInput === 'string' ? text.rawInput.slice(0, 20000) : appState.textOverlay.rawInput,
             segments:     Array.isArray(text.segments) ? (sanitizeSegments(text.segments) || []) : appState.textOverlay.segments,
             currentIndex: Number.isInteger(text.currentIndex) ? text.currentIndex : appState.textOverlay.currentIndex,
+            songTitle:    typeof text.songTitle === 'string' ? text.songTitle.slice(0, 120) : appState.textOverlay.songTitle,
             style:        sanitizeTextOverlayStyle(text.style, appState.textOverlay.style)
         };
     }
@@ -228,6 +251,7 @@ let appState = {
         rawInput:     '',           // the operator's pasted lyrics, kept so it can be re-split later
         segments:     [],           // [{ label, text }] — one per verse/chorus/etc.
         currentIndex: 0,            // which segment is on screen
+        songTitle:    '',           // set when loaded from the Song Library, for the "Now editing" label
         style:        DEFAULT_TEXT_OVERLAY_STYLE
     }
 };
@@ -428,6 +452,7 @@ io.on('connection', (socket) => {
     // Send current state on connect
     socket.emit('stateSync', appState);
     socket.emit('templatesSync', eventTemplates);
+    if (role === 'admin') socket.emit('songLibrarySync', songLibrary); // admin-only — not for sanctuary/overlay clients
 
     if ((role === 'sanctuary' || role === 'admin') && appState.sanctuaryOverride) {
         socket.emit('sanctuaryOverride', appState.sanctuaryOverride);
@@ -519,9 +544,29 @@ io.on('connection', (socket) => {
             to.currentIndex = Math.max(0, Math.min(patch.currentIndex, Math.max(0, to.segments.length - 1)));
         }
         if (typeof patch.visible === 'boolean') to.visible = patch.visible;
+        if (typeof patch.songTitle === 'string') to.songTitle = patch.songTitle.slice(0, 120);
         if (patch.style !== undefined) to.style = sanitizeTextOverlayStyle(patch.style, to.style);
         db.setSetting('textOverlay', to).catch(() => {});
         broadcastState();
+    }));
+
+    // --- SONG LIBRARY (save/load lyrics for reuse — admin-only, not sent to public clients) ---
+    socket.on('saveSong', ifAdmin((data) => {
+        const existing = data && data.id ? songLibrary.find(s => s.id === data.id) : null;
+        const song = sanitizeSong(data, existing ? existing.id : null);
+        if (!song) return;
+        const idx = songLibrary.findIndex(s => s.id === song.id);
+        if (idx !== -1) songLibrary[idx] = song; else songLibrary.push(song);
+        songLibrary.sort((a, b) => a.title.localeCompare(b.title));
+        db.saveSongToSupabase(song).catch(() => {});
+        io.to('admin').emit('songLibrarySync', songLibrary);
+    }));
+
+    socket.on('deleteSong', ifAdmin((id) => {
+        if (typeof id !== 'string') return;
+        songLibrary = songLibrary.filter(s => s.id !== id);
+        db.deleteSongFromSupabase(id).catch(() => {});
+        io.to('admin').emit('songLibrarySync', songLibrary);
     }));
 
     // --- OUTRO CONTROLS ---
@@ -598,6 +643,7 @@ io.on('connection', (socket) => {
 async function main() {
     await auth.init();
     await loadTemplates();
+    await loadSongLibrary();
     await loadSettings();
 
     if (appState.sanctuaryOverride) {
